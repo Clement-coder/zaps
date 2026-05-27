@@ -13,10 +13,12 @@ fn test_register_user_success() {
     env.mock_all_auths();
 
     let user_addr = Address::generate(&env);
+    let username = String::from_str(&env, "alice");
     let role = String::from_str(&env, "admin");
+    let profile_uri = String::from_str(&env, "https://example.com/alice");
 
     // Register user
-    client.register(&user_addr, &role);
+    client.register(&user_addr, &username, &role, &profile_uri);
 
     // Verify user is registered
     assert!(client.is_registered(&user_addr));
@@ -36,13 +38,15 @@ fn test_register_duplicate_user() {
     env.mock_all_auths();
 
     let user_addr = Address::generate(&env);
+    let username = String::from_str(&env, "bob");
     let role = String::from_str(&env, "user");
+    let profile_uri = String::from_str(&env, "");
 
     // Register user first time
-    client.register(&user_addr, &role);
+    client.register(&user_addr, &username, &role, &profile_uri);
 
     // Try to register the same user again
-    let result = client.try_register(&user_addr, &role);
+    let result = client.try_register(&user_addr, &username, &role, &profile_uri);
     assert_eq!(result, Err(Ok(Error::AlreadyRegistered)));
 }
 
@@ -89,10 +93,27 @@ fn test_multiple_users_with_different_roles() {
     let user_addr = Address::generate(&env);
     let user_role = String::from_str(&env, "user");
 
+    let profile_uri = String::from_str(&env, "");
+
     // Register all users
-    client.register(&admin_addr, &admin_role);
-    client.register(&moderator_addr, &moderator_role);
-    client.register(&user_addr, &user_role);
+    client.register(
+        &admin_addr,
+        &String::from_str(&env, "admin_user"),
+        &admin_role,
+        &profile_uri,
+    );
+    client.register(
+        &moderator_addr,
+        &String::from_str(&env, "mod_user"),
+        &moderator_role,
+        &profile_uri,
+    );
+    client.register(
+        &user_addr,
+        &String::from_str(&env, "regular_user"),
+        &user_role,
+        &profile_uri,
+    );
 
     // Verify all are registered
     assert!(client.is_registered(&admin_addr));
@@ -117,12 +138,14 @@ fn test_register_requires_auth() {
     let client = UserIdentityContractClient::new(&env, &contract_id);
 
     let user_addr = Address::generate(&env);
+    let username = String::from_str(&env, "charlie");
     let role = String::from_str(&env, "user");
+    let profile_uri = String::from_str(&env, "");
 
     // Mock authentication
     env.mock_all_auths();
 
-    client.register(&user_addr, &role);
+    client.register(&user_addr, &username, &role, &profile_uri);
 
     // Verify auth was required by checking that auth was recorded
     let auths = env.auths();
@@ -140,10 +163,12 @@ fn test_register_with_empty_role() {
     env.mock_all_auths();
 
     let user_addr = Address::generate(&env);
+    let username = String::from_str(&env, "dave");
     let empty_role = String::from_str(&env, "");
+    let profile_uri = String::from_str(&env, "");
 
     // Register user with empty role (should succeed as validation is up to the caller)
-    client.register(&user_addr, &empty_role);
+    client.register(&user_addr, &username, &empty_role, &profile_uri);
 
     // Verify user is registered with empty role
     let user = client.get_user(&user_addr);
@@ -159,10 +184,12 @@ fn test_register_with_long_role_name() {
     env.mock_all_auths();
 
     let user_addr = Address::generate(&env);
+    let username = String::from_str(&env, "eve");
     let long_role = String::from_str(&env, "super_administrator_with_full_permissions");
+    let profile_uri = String::from_str(&env, "");
 
     // Register user with long role name
-    client.register(&user_addr, &long_role);
+    client.register(&user_addr, &username, &long_role, &profile_uri);
 
     // Verify user data
     let user = client.get_user(&user_addr);

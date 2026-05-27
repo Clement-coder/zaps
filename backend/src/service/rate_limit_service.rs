@@ -1,7 +1,7 @@
 use crate::config::Config;
 use crate::models::{EndpointRateLimitConfig, RateLimitConfig, RateLimitScope};
 use dashmap::DashMap;
-use redis::{aio::ConnectionManager, AsyncCommands};
+use redis::aio::ConnectionManager;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::sync::Mutex;
@@ -160,9 +160,9 @@ impl RateLimitService {
         let reset_after_seconds = if count > 0 {
             let oldest_plus_window = oldest_ts.saturating_add(window_ms);
             let time_remaining_ms = oldest_plus_window.saturating_sub(now);
-            (time_remaining_ms + 999) / 1000
+            time_remaining_ms.div_ceil(1000)
         } else {
-            (window_ms + 999) / 1000
+            window_ms.div_ceil(1000)
         };
 
         Some(RateLimitDecision {
@@ -197,9 +197,9 @@ impl RateLimitService {
         let reset_after_seconds = if count > 0 {
             let oldest_plus_window = oldest_ts.saturating_add(window_ms);
             let time_remaining_ms = oldest_plus_window.saturating_sub(now);
-            (time_remaining_ms + 999) / 1000
+            time_remaining_ms.div_ceil(1000)
         } else {
-            (window_ms + 999) / 1000
+            window_ms.div_ceil(1000)
         };
 
         RateLimitDecision {

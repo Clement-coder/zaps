@@ -245,8 +245,7 @@ pub async fn create_app(
     // =========================================================================
     // Anchor & public routes
     // =========================================================================
-    let anchor_routes =
-        Router::new().route("/webhook", post(crate::http::anchor::anchor_webhook));
+    let anchor_routes = Router::new().route("/webhook", post(crate::http::anchor::anchor_webhook));
 
     let public_routes = Router::new()
         .nest("/anchor", anchor_routes)

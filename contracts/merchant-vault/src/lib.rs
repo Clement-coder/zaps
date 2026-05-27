@@ -1,8 +1,8 @@
 #![no_std]
 
 use soroban_sdk::{
-    contract, contracterror, contractimpl, contracttype,
-    symbol_short, vec, Address, Env, Symbol, Vec,
+    contract, contracterror, contractimpl, contracttype, symbol_short, vec, Address, Env, Symbol,
+    Vec,
 };
 
 // ---------------------------------------------------------------------------
@@ -11,15 +11,15 @@ use soroban_sdk::{
 
 #[contracttype]
 pub enum DataKey {
-    Balance(Address),   // merchant_id → i128
-    PaymentRouter,      // authorized payment router
-    PayoutContract,     // authorized payout contract
-    Admin,              // contract administrator
+    Balance(Address), // merchant_id → i128
+    PaymentRouter,    // authorized payment router
+    PayoutContract,   // authorized payout contract
+    Admin,            // contract administrator
     // Multi-sig
-    Signers,            // Vec<Address> — the signer set
-    Threshold,          // u32 — approvals required
-    NextProposalId,     // u32 — monotonic counter
-    Proposal(u32),      // proposal_id → Proposal
+    Signers,        // Vec<Address> — the signer set
+    Threshold,      // u32 — approvals required
+    NextProposalId, // u32 — monotonic counter
+    Proposal(u32),  // proposal_id → Proposal
 }
 
 // ---------------------------------------------------------------------------
@@ -95,7 +95,6 @@ pub struct MerchantVault;
 
 #[contractimpl]
 impl MerchantVault {
-
     // -----------------------------------------------------------------------
     // Initialisation
     // -----------------------------------------------------------------------
@@ -126,19 +125,29 @@ impl MerchantVault {
         if signers.is_empty() {
             return Err(Error::EmptySigners);
         }
-        if threshold == 0 || threshold > signers.len() as u32 {
+        if threshold == 0 || threshold > signers.len() {
             return Err(Error::InvalidThreshold);
         }
 
         env.storage().instance().set(&DataKey::Admin, &admin);
-        env.storage().instance().set(&DataKey::PaymentRouter, &payment_router);
-        env.storage().instance().set(&DataKey::PayoutContract, &payout_contract);
+        env.storage()
+            .instance()
+            .set(&DataKey::PaymentRouter, &payment_router);
+        env.storage()
+            .instance()
+            .set(&DataKey::PayoutContract, &payout_contract);
         env.storage().instance().set(&DataKey::Signers, &signers);
-        env.storage().instance().set(&DataKey::Threshold, &threshold);
+        env.storage()
+            .instance()
+            .set(&DataKey::Threshold, &threshold);
         // expiry_ledgers stored per-proposal at proposal time; keep a default
         // in instance storage so callers don't have to pass it every time.
-        env.storage().instance().set(&symbol_short!("exp_ldgrs"), &expiry_ledgers);
-        env.storage().instance().set(&DataKey::NextProposalId, &0u32);
+        env.storage()
+            .instance()
+            .set(&symbol_short!("exp_ldgrs"), &expiry_ledgers);
+        env.storage()
+            .instance()
+            .set(&DataKey::NextProposalId, &0u32);
 
         Ok(())
     }
@@ -153,11 +162,17 @@ impl MerchantVault {
 
         admin.require_auth();
 
-        if env.storage().persistent().has(&DataKey::Balance(merchant_id.clone())) {
+        if env
+            .storage()
+            .persistent()
+            .has(&DataKey::Balance(merchant_id.clone()))
+        {
             return Err(Error::AlreadyInitialized);
         }
 
-        env.storage().persistent().set(&DataKey::Balance(merchant_id), &0i128);
+        env.storage()
+            .persistent()
+            .set(&DataKey::Balance(merchant_id), &0i128);
         Ok(())
     }
 
@@ -179,7 +194,11 @@ impl MerchantVault {
             return Err(Error::NegativeAmount);
         }
 
-        if !env.storage().persistent().has(&DataKey::Balance(merchant_id.clone())) {
+        if !env
+            .storage()
+            .persistent()
+            .has(&DataKey::Balance(merchant_id.clone()))
+        {
             return Err(Error::MerchantNotInitialized);
         }
 
@@ -191,11 +210,17 @@ impl MerchantVault {
 
         let new_balance = current.checked_add(amount).expect("Balance overflow");
 
-        env.storage().persistent().set(&DataKey::Balance(merchant_id.clone()), &new_balance);
+        env.storage()
+            .persistent()
+            .set(&DataKey::Balance(merchant_id.clone()), &new_balance);
 
         env.events().publish(
             (Symbol::new(&env, "balance_credited"), merchant_id.clone()),
-            BalanceCreditedEvent { merchant_id, amount, resulting_balance: new_balance },
+            BalanceCreditedEvent {
+                merchant_id,
+                amount,
+                resulting_balance: new_balance,
+            },
         );
 
         Ok(new_balance)
@@ -218,7 +243,11 @@ impl MerchantVault {
             return Err(Error::NegativeAmount);
         }
 
-        if !env.storage().persistent().has(&DataKey::Balance(merchant_id.clone())) {
+        if !env
+            .storage()
+            .persistent()
+            .has(&DataKey::Balance(merchant_id.clone()))
+        {
             return Err(Error::MerchantNotInitialized);
         }
 
@@ -233,11 +262,17 @@ impl MerchantVault {
         }
 
         let new_balance = current - amount;
-        env.storage().persistent().set(&DataKey::Balance(merchant_id.clone()), &new_balance);
+        env.storage()
+            .persistent()
+            .set(&DataKey::Balance(merchant_id.clone()), &new_balance);
 
         env.events().publish(
             (Symbol::new(&env, "balance_debited"), merchant_id.clone()),
-            BalanceDebitedEvent { merchant_id, amount, resulting_balance: new_balance },
+            BalanceDebitedEvent {
+                merchant_id,
+                amount,
+                resulting_balance: new_balance,
+            },
         );
 
         Ok(new_balance)
@@ -267,7 +302,11 @@ impl MerchantVault {
             return Err(Error::NegativeAmount);
         }
 
-        if !env.storage().persistent().has(&DataKey::Balance(merchant_id.clone())) {
+        if !env
+            .storage()
+            .persistent()
+            .has(&DataKey::Balance(merchant_id.clone()))
+        {
             return Err(Error::MerchantNotInitialized);
         }
 
@@ -298,8 +337,12 @@ impl MerchantVault {
             cancelled: false,
         };
 
-        env.storage().persistent().set(&DataKey::Proposal(proposal_id), &proposal);
-        env.storage().instance().set(&DataKey::NextProposalId, &(proposal_id + 1));
+        env.storage()
+            .persistent()
+            .set(&DataKey::Proposal(proposal_id), &proposal);
+        env.storage()
+            .instance()
+            .set(&DataKey::NextProposalId, &(proposal_id + 1));
 
         env.events().publish(
             (symbol_short!("multisig"), symbol_short!("proposed")),
@@ -355,12 +398,14 @@ impl MerchantVault {
             .get(&DataKey::Threshold)
             .unwrap_or(1);
 
-        let executed = proposal.approvals.len() as u32 >= threshold;
+        let executed = proposal.approvals.len() >= threshold;
 
         if executed {
             // Checks-Effects-Interactions: update state before any balance change.
             proposal.executed = true;
-            env.storage().persistent().set(&DataKey::Proposal(proposal_id), &proposal);
+            env.storage()
+                .persistent()
+                .set(&DataKey::Proposal(proposal_id), &proposal);
 
             // Debit the balance.
             let current: i128 = env
@@ -374,20 +419,33 @@ impl MerchantVault {
             }
 
             let new_balance = current - proposal.amount;
-            env.storage()
-                .persistent()
-                .set(&DataKey::Balance(proposal.merchant_id.clone()), &new_balance);
+            env.storage().persistent().set(
+                &DataKey::Balance(proposal.merchant_id.clone()),
+                &new_balance,
+            );
 
             env.events().publish(
                 (symbol_short!("multisig"), symbol_short!("executed")),
-                (proposal_id, proposal.merchant_id.clone(), proposal.amount, new_balance),
+                (
+                    proposal_id,
+                    proposal.merchant_id.clone(),
+                    proposal.amount,
+                    new_balance,
+                ),
             );
         } else {
-            env.storage().persistent().set(&DataKey::Proposal(proposal_id), &proposal);
+            env.storage()
+                .persistent()
+                .set(&DataKey::Proposal(proposal_id), &proposal);
 
             env.events().publish(
                 (symbol_short!("multisig"), symbol_short!("approved")),
-                (proposal_id, approver, proposal.approvals.len() as u32, threshold),
+                (
+                    proposal_id,
+                    approver,
+                    proposal.approvals.len(),
+                    threshold,
+                ),
             );
         }
 
@@ -397,11 +455,7 @@ impl MerchantVault {
     /// Cancel a pending proposal.
     ///
     /// Only the original proposer or the admin may cancel.
-    pub fn cancel_proposal(
-        env: Env,
-        proposal_id: u32,
-        caller: Address,
-    ) -> Result<(), Error> {
+    pub fn cancel_proposal(env: Env, proposal_id: u32, caller: Address) -> Result<(), Error> {
         caller.require_auth();
 
         let mut proposal: Proposal = env
@@ -428,7 +482,9 @@ impl MerchantVault {
         }
 
         proposal.cancelled = true;
-        env.storage().persistent().set(&DataKey::Proposal(proposal_id), &proposal);
+        env.storage()
+            .persistent()
+            .set(&DataKey::Proposal(proposal_id), &proposal);
 
         env.events().publish(
             (symbol_short!("multisig"), symbol_short!("cancelled")),
@@ -443,7 +499,11 @@ impl MerchantVault {
     // -----------------------------------------------------------------------
 
     pub fn balance_of(env: Env, merchant_id: Address) -> Result<i128, Error> {
-        if !env.storage().persistent().has(&DataKey::Balance(merchant_id.clone())) {
+        if !env
+            .storage()
+            .persistent()
+            .has(&DataKey::Balance(merchant_id.clone()))
+        {
             return Err(Error::MerchantNotInitialized);
         }
         Ok(env
@@ -461,7 +521,10 @@ impl MerchantVault {
     }
 
     pub fn get_threshold(env: Env) -> u32 {
-        env.storage().instance().get(&DataKey::Threshold).unwrap_or(0)
+        env.storage()
+            .instance()
+            .get(&DataKey::Threshold)
+            .unwrap_or(0)
     }
 
     pub fn get_signers(env: Env) -> Vec<Address> {
@@ -491,7 +554,9 @@ impl MerchantVault {
             .get(&DataKey::Admin)
             .ok_or(Error::NotInitialized)?;
         admin.require_auth();
-        env.storage().instance().set(&DataKey::PaymentRouter, &new_router);
+        env.storage()
+            .instance()
+            .set(&DataKey::PaymentRouter, &new_router);
         Ok(())
     }
 
@@ -502,7 +567,9 @@ impl MerchantVault {
             .get(&DataKey::Admin)
             .ok_or(Error::NotInitialized)?;
         admin.require_auth();
-        env.storage().instance().set(&DataKey::PayoutContract, &new_payout);
+        env.storage()
+            .instance()
+            .set(&DataKey::PayoutContract, &new_payout);
         Ok(())
     }
 

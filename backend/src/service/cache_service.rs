@@ -1,8 +1,8 @@
 use crate::{api_error::ApiError, config::Config, service::MetricsService};
 use redis::{aio::ConnectionManager, AsyncCommands};
 use serde::{de::DeserializeOwned, Serialize};
-use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 use tokio::sync::Mutex;
 
 /// Cache hit/miss counters for hit-rate monitoring.
@@ -199,13 +199,10 @@ impl CacheService {
 
             if !keys.is_empty() {
                 let count = keys.len() as u64;
-                connection
-                    .del::<_, ()>(keys)
-                    .await
-                    .map_err(|_| {
-                        MetricsService::record_cache_event("invalidate_pattern", "error");
-                        ApiError::InternalServerError
-                    })?;
+                connection.del::<_, ()>(keys).await.map_err(|_| {
+                    MetricsService::record_cache_event("invalidate_pattern", "error");
+                    ApiError::InternalServerError
+                })?;
                 deleted += count;
             }
 
@@ -285,24 +282,18 @@ impl CacheService {
         let tag_key = format!("tag:{}", tag);
 
         // Fetch all keys registered under this tag
-        let keys: Vec<String> = connection
-            .smembers(&tag_key)
-            .await
-            .map_err(|_| {
-                MetricsService::record_cache_event("invalidate_tag", "error");
-                ApiError::InternalServerError
-            })?;
+        let keys: Vec<String> = connection.smembers(&tag_key).await.map_err(|_| {
+            MetricsService::record_cache_event("invalidate_tag", "error");
+            ApiError::InternalServerError
+        })?;
 
         let count = keys.len() as u64;
 
         if !keys.is_empty() {
-            connection
-                .del::<_, ()>(keys)
-                .await
-                .map_err(|_| {
-                    MetricsService::record_cache_event("invalidate_tag", "error");
-                    ApiError::InternalServerError
-                })?;
+            connection.del::<_, ()>(keys).await.map_err(|_| {
+                MetricsService::record_cache_event("invalidate_tag", "error");
+                ApiError::InternalServerError
+            })?;
         }
 
         // Remove the tag set itself

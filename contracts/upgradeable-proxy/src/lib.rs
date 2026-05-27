@@ -1,8 +1,8 @@
 #![no_std]
 
 use soroban_sdk::{
-    contract, contractclient, contracterror, contractimpl, contracttype, Address, Env, Symbol,
-    Val, Vec,
+    contract, contractclient, contracterror, contractimpl, contracttype, Address, Env, Symbol, Val,
+    Vec,
 };
 
 #[contracterror]
@@ -99,7 +99,9 @@ impl UpgradeableProxy {
         env.storage()
             .instance()
             .set(&DataKey::CurrentImplementation, &implementation);
-        env.storage().instance().set(&DataKey::CurrentVersion, &version);
+        env.storage()
+            .instance()
+            .set(&DataKey::CurrentVersion, &version);
         env.storage()
             .instance()
             .set(&DataKey::VersionImplementation(version), &implementation);
@@ -157,7 +159,9 @@ impl UpgradeableProxy {
             steps,
         };
 
-        env.storage().instance().set(&DataKey::PendingUpgrade, &pending);
+        env.storage()
+            .instance()
+            .set(&DataKey::PendingUpgrade, &pending);
         Ok(())
     }
 
@@ -286,9 +290,7 @@ impl UpgradeableProxy {
 
     pub fn set_state_value(env: Env, key: Symbol, value: i128) -> Result<(), UpgradeError> {
         require_admin(&env)?;
-        env.storage()
-            .persistent()
-            .set(&DataKey::State(key), &value);
+        env.storage().persistent().set(&DataKey::State(key), &value);
         Ok(())
     }
 
@@ -361,7 +363,10 @@ fn read_current_version(env: &Env) -> Result<u32, UpgradeError> {
 }
 
 fn is_paused(env: &Env) -> bool {
-    env.storage().instance().get(&DataKey::Paused).unwrap_or(false)
+    env.storage()
+        .instance()
+        .get(&DataKey::Paused)
+        .unwrap_or(false)
 }
 
 fn append_history(env: &Env, record: UpgradeRecord) {
@@ -371,7 +376,9 @@ fn append_history(env: &Env, record: UpgradeRecord) {
         .get(&DataKey::UpgradeHistory)
         .unwrap_or_else(|| Vec::new(env));
     history.push_back(record);
-    env.storage().instance().set(&DataKey::UpgradeHistory, &history);
+    env.storage()
+        .instance()
+        .set(&DataKey::UpgradeHistory, &history);
 }
 
 mod test;

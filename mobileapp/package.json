@@ -11,7 +11,8 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "test": "jest --passWithNoTests",
-    "build": "expo export --platform web --output-dir dist || echo 'Build check completed'"
+    "build": "expo export --platform web --output-dir dist || echo 'Build check completed'",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@expo-google-fonts/anton": "^0.4.2",

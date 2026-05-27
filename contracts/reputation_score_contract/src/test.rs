@@ -35,7 +35,11 @@ impl Setup {
         let client: ReputationScoreContractClient<'static> =
             unsafe { core::mem::transmute(client) };
 
-        Setup { env, client, reporter }
+        Setup {
+            env,
+            client,
+            reporter,
+        }
     }
 
     fn user(&self) -> Address {
@@ -146,7 +150,8 @@ fn test_one_tier_volume_adds_one_bonus_point() {
 fn test_five_tiers_volume_adds_five_bonus_points() {
     let s = Setup::new();
     let user = s.user();
-    s.client.record_success(&s.reporter, &user, &(5 * VOLUME_TIER));
+    s.client
+        .record_success(&s.reporter, &user, &(5 * VOLUME_TIER));
     assert_eq!(s.client.get_score(&user), NEUTRAL + BASE_SUCCESS_DELTA + 5);
 }
 
@@ -155,7 +160,8 @@ fn test_volume_bonus_capped_at_max() {
     let s = Setup::new();
     let user = s.user();
     // 100 tiers → bonus would be 100, but capped at MAX_VOLUME_BONUS(20)
-    s.client.record_success(&s.reporter, &user, &(100 * VOLUME_TIER));
+    s.client
+        .record_success(&s.reporter, &user, &(100 * VOLUME_TIER));
     assert_eq!(
         s.client.get_score(&user),
         NEUTRAL + BASE_SUCCESS_DELTA + MAX_VOLUME_BONUS
@@ -167,7 +173,10 @@ fn test_volume_delta_helper_values() {
     assert_eq!(volume_delta(0), BASE_SUCCESS_DELTA);
     assert_eq!(volume_delta(VOLUME_TIER), BASE_SUCCESS_DELTA + 1);
     assert_eq!(volume_delta(5 * VOLUME_TIER), BASE_SUCCESS_DELTA + 5);
-    assert_eq!(volume_delta(100 * VOLUME_TIER), BASE_SUCCESS_DELTA + MAX_VOLUME_BONUS);
+    assert_eq!(
+        volume_delta(100 * VOLUME_TIER),
+        BASE_SUCCESS_DELTA + MAX_VOLUME_BONUS
+    );
     // Sub-tier amounts round down to zero bonus.
     assert_eq!(volume_delta(VOLUME_TIER - 1), BASE_SUCCESS_DELTA);
 }
@@ -186,8 +195,10 @@ fn test_negative_volume_rejected() {
 fn test_multiple_successes_accumulate_volume() {
     let s = Setup::new();
     let user = s.user();
-    s.client.record_success(&s.reporter, &user, &(2 * VOLUME_TIER));
-    s.client.record_success(&s.reporter, &user, &(3 * VOLUME_TIER));
+    s.client
+        .record_success(&s.reporter, &user, &(2 * VOLUME_TIER));
+    s.client
+        .record_success(&s.reporter, &user, &(3 * VOLUME_TIER));
     let rec = s.client.get_record(&user);
     assert_eq!(rec.total_volume, 5 * VOLUME_TIER);
     assert_eq!(rec.tx_success, 2);
@@ -199,7 +210,8 @@ fn test_score_capped_at_max() {
     let user = s.user();
     // Each tx with max bonus = 5 + 20 = 25 pts.  From 500 need 500 more → 20 txs.
     for _ in 0..40 {
-        s.client.record_success(&s.reporter, &user, &(100 * VOLUME_TIER));
+        s.client
+            .record_success(&s.reporter, &user, &(100 * VOLUME_TIER));
     }
     assert_eq!(s.client.get_score(&user), MAX_SCORE);
 }
@@ -302,7 +314,8 @@ fn test_decay_moves_high_score_toward_neutral() {
     let user = s.user();
     // Push to 1000.
     for _ in 0..40 {
-        s.client.record_success(&s.reporter, &user, &(100 * VOLUME_TIER));
+        s.client
+            .record_success(&s.reporter, &user, &(100 * VOLUME_TIER));
     }
     assert_eq!(s.client.get_score(&user), MAX_SCORE);
 
@@ -366,7 +379,8 @@ fn test_decay_applied_on_next_write() {
     let s = Setup::new();
     let user = s.user();
     for _ in 0..40 {
-        s.client.record_success(&s.reporter, &user, &(100 * VOLUME_TIER));
+        s.client
+            .record_success(&s.reporter, &user, &(100 * VOLUME_TIER));
     }
     assert_eq!(s.client.get_score(&user), MAX_SCORE);
 
@@ -382,7 +396,8 @@ fn test_multi_period_decay_converges() {
     let s = Setup::new();
     let user = s.user();
     for _ in 0..40 {
-        s.client.record_success(&s.reporter, &user, &(100 * VOLUME_TIER));
+        s.client
+            .record_success(&s.reporter, &user, &(100 * VOLUME_TIER));
     }
     assert_eq!(s.client.get_score(&user), MAX_SCORE);
 
@@ -447,8 +462,10 @@ fn test_calculate_score_new_user() {
 fn test_calculate_score_after_successes() {
     let s = Setup::new();
     let user = s.user();
-    s.client.record_success(&s.reporter, &user, &(2 * VOLUME_TIER));
-    s.client.record_success(&s.reporter, &user, &(2 * VOLUME_TIER));
+    s.client
+        .record_success(&s.reporter, &user, &(2 * VOLUME_TIER));
+    s.client
+        .record_success(&s.reporter, &user, &(2 * VOLUME_TIER));
 
     let b = s.client.calculate_score(&user);
     assert_eq!(b.tx_success, 2);
@@ -502,7 +519,8 @@ fn test_calculate_score_pre_decay_score_matches_stored() {
     let s = Setup::new();
     let user = s.user();
     for _ in 0..10 {
-        s.client.record_success(&s.reporter, &user, &(5 * VOLUME_TIER));
+        s.client
+            .record_success(&s.reporter, &user, &(5 * VOLUME_TIER));
     }
     let stored_score = s.client.get_record(&user).score;
 
@@ -531,7 +549,8 @@ fn test_calculate_score_is_read_only() {
 fn test_calculate_score_total_impact_consistent() {
     let s = Setup::new();
     let user = s.user();
-    s.client.record_success(&s.reporter, &user, &(3 * VOLUME_TIER));
+    s.client
+        .record_success(&s.reporter, &user, &(3 * VOLUME_TIER));
     s.client.record_dispute(&s.reporter, &user);
     s.client.record_dispute_resolved(&s.reporter, &user, &true);
 
@@ -554,7 +573,8 @@ fn test_mixed_activity_score_trajectory() {
 
     // Build reputation with volume.
     for _ in 0..10 {
-        s.client.record_success(&s.reporter, &user, &(5 * VOLUME_TIER));
+        s.client
+            .record_success(&s.reporter, &user, &(5 * VOLUME_TIER));
     }
     let after_success = s.client.get_score(&user);
     assert!(after_success > NEUTRAL);
@@ -567,7 +587,8 @@ fn test_mixed_activity_score_trajectory() {
 
     // Recover with more successful txs.
     for _ in 0..5 {
-        s.client.record_success(&s.reporter, &user, &(10 * VOLUME_TIER));
+        s.client
+            .record_success(&s.reporter, &user, &(10 * VOLUME_TIER));
     }
     let after_recovery = s.client.get_score(&user);
     assert!(after_recovery > after_loss);

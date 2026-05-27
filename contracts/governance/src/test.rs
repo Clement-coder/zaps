@@ -14,7 +14,7 @@ fn sdk_err(e: GovError) -> SdkError {
 // Helpers
 // ---------------------------------------------------------------------------
 
-fn default_config(env: &Env) -> GovernanceConfig {
+fn default_config(_env: &Env) -> GovernanceConfig {
     GovernanceConfig {
         voting_period_ledgers: 100,
         timelock_ledgers: 50,
@@ -60,8 +60,7 @@ impl Setup {
         client.set_voting_power(&voter_a, &10i128);
         client.set_voting_power(&voter_b, &5i128);
 
-        let client: GovernanceContractClient<'static> =
-            unsafe { core::mem::transmute(client) };
+        let client: GovernanceContractClient<'static> = unsafe { core::mem::transmute(client) };
 
         Setup {
             env,
@@ -391,10 +390,7 @@ fn test_execute_after_timelock_succeeds() {
     s.env.ledger().with_mut(|l| l.sequence_number += 50);
     s.client.execute(&id);
 
-    assert_eq!(
-        s.client.get_proposal(&id).status,
-        ProposalStatus::Executed
-    );
+    assert_eq!(s.client.get_proposal(&id).status, ProposalStatus::Executed);
 }
 
 #[test]
@@ -416,10 +412,7 @@ fn test_proposer_can_cancel() {
     let s = Setup::new();
     let id = s.create_proposal();
     s.client.cancel(&s.voter_a, &id);
-    assert_eq!(
-        s.client.get_proposal(&id).status,
-        ProposalStatus::Cancelled
-    );
+    assert_eq!(s.client.get_proposal(&id).status, ProposalStatus::Cancelled);
 }
 
 #[test]
@@ -427,10 +420,7 @@ fn test_admin_can_cancel() {
     let s = Setup::new();
     let id = s.create_proposal();
     s.client.cancel(&s.admin, &id);
-    assert_eq!(
-        s.client.get_proposal(&id).status,
-        ProposalStatus::Cancelled
-    );
+    assert_eq!(s.client.get_proposal(&id).status, ProposalStatus::Cancelled);
 }
 
 #[test]
@@ -530,8 +520,5 @@ fn test_full_proposal_lifecycle() {
 
     // 6. Execute.
     s.client.execute(&id);
-    assert_eq!(
-        s.client.get_proposal(&id).status,
-        ProposalStatus::Executed
-    );
+    assert_eq!(s.client.get_proposal(&id).status, ProposalStatus::Executed);
 }

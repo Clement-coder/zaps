@@ -83,7 +83,13 @@ impl Setup {
 
         let client: PaymentRouterClient<'static> = unsafe { core::mem::transmute(client) };
 
-        Setup { env, client, payer, merchant_id, usdc }
+        Setup {
+            env,
+            client,
+            payer,
+            merchant_id,
+            usdc,
+        }
     }
 }
 
@@ -121,9 +127,7 @@ fn count_admin_event(env: &Env, action: &str) -> usize {
             let t0 = <Symbol as TryFromVal<Env, _>>::try_from_val(env, &topics.get(0).unwrap());
             let t1 = <Symbol as TryFromVal<Env, _>>::try_from_val(env, &topics.get(1).unwrap());
             match (t0, t1) {
-                (Ok(s0), Ok(s1)) => {
-                    s0 == symbol_short!("admin") && s1 == Symbol::new(env, action)
-                }
+                (Ok(s0), Ok(s1)) => s0 == symbol_short!("admin") && s1 == Symbol::new(env, action),
                 _ => false,
             }
         })
@@ -249,7 +253,8 @@ fn test_pay_blocked_when_paused() {
     let s = Setup::new();
     s.client.pause();
     assert_eq!(
-        s.client.try_pay(&s.payer, &s.merchant_id, &s.usdc, &1000i128, &1000i128),
+        s.client
+            .try_pay(&s.payer, &s.merchant_id, &s.usdc, &1000i128, &1000i128),
         Err(Ok(sdk_err(PaymentError::ContractPaused)))
     );
 }
@@ -260,7 +265,9 @@ fn test_pay_succeeds_after_unpause() {
     let s = Setup::new();
     s.client.pause();
     s.client.unpause();
-    let net = s.client.pay(&s.payer, &s.merchant_id, &s.usdc, &1000i128, &1000i128);
+    let net = s
+        .client
+        .pay(&s.payer, &s.merchant_id, &s.usdc, &1000i128, &1000i128);
     assert_eq!(net, 1000);
 }
 
@@ -268,7 +275,9 @@ fn test_pay_succeeds_after_unpause() {
 #[test]
 fn test_pay_succeeds_when_never_paused() {
     let s = Setup::new();
-    let net = s.client.pay(&s.payer, &s.merchant_id, &s.usdc, &500i128, &500i128);
+    let net = s
+        .client
+        .pay(&s.payer, &s.merchant_id, &s.usdc, &500i128, &500i128);
     assert_eq!(net, 500);
 }
 
@@ -278,7 +287,9 @@ fn test_pay_blocked_after_mid_session_pause() {
     let s = Setup::new();
 
     // First payment succeeds.
-    let net = s.client.pay(&s.payer, &s.merchant_id, &s.usdc, &100i128, &100i128);
+    let net = s
+        .client
+        .pay(&s.payer, &s.merchant_id, &s.usdc, &100i128, &100i128);
     assert_eq!(net, 100);
 
     // Admin pauses.
@@ -286,7 +297,8 @@ fn test_pay_blocked_after_mid_session_pause() {
 
     // Second payment must be blocked.
     assert_eq!(
-        s.client.try_pay(&s.payer, &s.merchant_id, &s.usdc, &100i128, &100i128),
+        s.client
+            .try_pay(&s.payer, &s.merchant_id, &s.usdc, &100i128, &100i128),
         Err(Ok(sdk_err(PaymentError::ContractPaused)))
     );
 }
@@ -300,13 +312,16 @@ fn test_multiple_pause_unpause_cycles() {
         s.client.pause();
         assert!(s.client.is_paused());
         assert_eq!(
-            s.client.try_pay(&s.payer, &s.merchant_id, &s.usdc, &10i128, &10i128),
+            s.client
+                .try_pay(&s.payer, &s.merchant_id, &s.usdc, &10i128, &10i128),
             Err(Ok(sdk_err(PaymentError::ContractPaused)))
         );
 
         s.client.unpause();
         assert!(!s.client.is_paused());
-        let net = s.client.pay(&s.payer, &s.merchant_id, &s.usdc, &10i128, &10i128);
+        let net = s
+            .client
+            .pay(&s.payer, &s.merchant_id, &s.usdc, &10i128, &10i128);
         assert_eq!(net, 10);
     }
 }
@@ -348,6 +363,14 @@ fn test_pause_unpause_event_count() {
     s.client.pause();
     s.client.unpause();
 
-    assert_eq!(count_admin_event(&s.env, "paused"), 2, "expected 2 pause events");
-    assert_eq!(count_admin_event(&s.env, "unpaused"), 2, "expected 2 unpause events");
+    assert_eq!(
+        count_admin_event(&s.env, "paused"),
+        2,
+        "expected 2 pause events"
+    );
+    assert_eq!(
+        count_admin_event(&s.env, "unpaused"),
+        2,
+        "expected 2 unpause events"
+    );
 }

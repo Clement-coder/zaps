@@ -266,7 +266,6 @@ pub struct ReputationScoreContract;
 
 #[contractimpl]
 impl ReputationScoreContract {
-
     // -----------------------------------------------------------------------
     // Initialisation
     // -----------------------------------------------------------------------
@@ -277,7 +276,9 @@ impl ReputationScoreContract {
         }
         admin.require_auth();
         env.storage().instance().set(&Key::Admin, &admin);
-        env.storage().instance().extend_ttl(TTL_THRESHOLD, TTL_EXTEND);
+        env.storage()
+            .instance()
+            .extend_ttl(TTL_THRESHOLD, TTL_EXTEND);
     }
 
     // -----------------------------------------------------------------------
@@ -291,7 +292,9 @@ impl ReputationScoreContract {
             panic_with_error!(env, RepError::ReporterAlreadyAdded);
         }
         env.storage().instance().set(&key, &true);
-        env.storage().instance().extend_ttl(TTL_THRESHOLD, TTL_EXTEND);
+        env.storage()
+            .instance()
+            .extend_ttl(TTL_THRESHOLD, TTL_EXTEND);
         env.events()
             .publish((symbol_short!("rep"), symbol_short!("rptr_add")), reporter);
     }

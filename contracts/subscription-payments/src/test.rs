@@ -69,8 +69,7 @@ impl Setup {
         approve(&env, &token, &subscriber, &contract_id, 1_000_000);
 
         // SAFETY: lifetime extension for test convenience (env outlives client).
-        let client: SubscriptionPaymentsClient<'static> =
-            unsafe { core::mem::transmute(client) };
+        let client: SubscriptionPaymentsClient<'static> = unsafe { core::mem::transmute(client) };
 
         Setup {
             env,
@@ -159,10 +158,7 @@ fn test_subscribe_executes_first_payment() {
     let sub_id = s.client.subscribe(&s.subscriber, &s.plan_id);
 
     // Merchant received first payment.
-    assert_eq!(
-        TokenClient::new(&s.env, &s.token).balance(&s.merchant),
-        100
-    );
+    assert_eq!(TokenClient::new(&s.env, &s.token).balance(&s.merchant), 100);
 
     let sub = s.client.get_subscription(&sub_id);
     assert_eq!(sub.status, SubscriptionStatus::Active);
@@ -207,10 +203,7 @@ fn test_execute_payment_on_due_ledger_succeeds() {
     assert!(success);
 
     // Merchant received two payments total (subscribe + execute).
-    assert_eq!(
-        TokenClient::new(&s.env, &s.token).balance(&s.merchant),
-        200
-    );
+    assert_eq!(TokenClient::new(&s.env, &s.token).balance(&s.merchant), 200);
 
     let sub = s.client.get_subscription(&sub_id);
     assert_eq!(sub.payments_made, 2);
@@ -347,8 +340,7 @@ fn test_auto_cancel_after_max_retries() {
 
     // Exhaust MAX_RETRIES (3) failed payments.
     for i in 1..=MAX_RETRIES {
-        env.ledger()
-            .with_mut(|l| l.sequence_number += 1000);
+        env.ledger().with_mut(|l| l.sequence_number += 1000);
         let success = client.execute_payment(&sub_id);
         assert!(!success);
         let sub = client.get_subscription(&sub_id);

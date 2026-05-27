@@ -23,9 +23,8 @@
 //!   re-entrant calls during distribution.
 
 use soroban_sdk::{
-    contract, contracterror, contractimpl, contracttype,
-    symbol_short, token::Client as TokenClient,
-    Address, Env, Symbol, Vec,
+    contract, contracterror, contractimpl, contracttype, symbol_short,
+    token::Client as TokenClient, Address, Env, Symbol, Vec,
 };
 
 // ---------------------------------------------------------------------------
@@ -75,12 +74,12 @@ pub enum Error {
     AlreadyInitialized = 1,
     NotInitialized = 2,
     Unauthorized = 3,
-    InvalidShares = 4,      // shares don't sum to BPS_TOTAL
+    InvalidShares = 4, // shares don't sum to BPS_TOTAL
     EmptyRecipients = 5,
     ZeroAmount = 6,
     NothingToDistribute = 7,
     Reentrant = 8,
-    InvalidShareValue = 9,  // individual share is 0 or > BPS_TOTAL
+    InvalidShareValue = 9, // individual share is 0 or > BPS_TOTAL
 }
 
 // ---------------------------------------------------------------------------
@@ -92,7 +91,6 @@ pub struct FeeDistribution;
 
 #[contractimpl]
 impl FeeDistribution {
-
     // -----------------------------------------------------------------------
     // Initialisation
     // -----------------------------------------------------------------------
@@ -148,14 +146,17 @@ impl FeeDistribution {
         Self::require_initialized(&env)?;
 
         let token: Address = env.storage().instance().get(&KEY_TOKEN).unwrap();
-        TokenClient::new(&env, &token)
-            .transfer(&from, &env.current_contract_address(), &amount);
+        TokenClient::new(&env, &token).transfer(&from, &env.current_contract_address(), &amount);
 
         let pending: i128 = env.storage().instance().get(&KEY_PENDING).unwrap_or(0);
         let total_in: i128 = env.storage().instance().get(&KEY_TOTAL_IN).unwrap_or(0);
 
-        env.storage().instance().set(&KEY_PENDING, &(pending + amount));
-        env.storage().instance().set(&KEY_TOTAL_IN, &(total_in + amount));
+        env.storage()
+            .instance()
+            .set(&KEY_PENDING, &(pending + amount));
+        env.storage()
+            .instance()
+            .set(&KEY_TOTAL_IN, &(total_in + amount));
 
         env.events().publish(
             (symbol_short!("fee_dist"), symbol_short!("deposited")),
@@ -198,10 +199,7 @@ impl FeeDistribution {
     /// The new list must be non-empty and shares must sum to exactly 10 000.
     /// Any pending fees are distributed with the *old* list before the update
     /// takes effect, so no funds are mis-attributed.
-    pub fn set_recipients(
-        env: Env,
-        recipients: Vec<Recipient>,
-    ) -> Result<(), Error> {
+    pub fn set_recipients(env: Env, recipients: Vec<Recipient>) -> Result<(), Error> {
         Self::require_initialized(&env)?;
         let admin: Address = env.storage().instance().get(&KEY_ADMIN).unwrap();
         admin.require_auth();
@@ -218,7 +216,7 @@ impl FeeDistribution {
 
         env.events().publish(
             (symbol_short!("fee_dist"), symbol_short!("recips_up")),
-            recipients.len() as u32,
+            recipients.len(),
         );
 
         Ok(())
@@ -354,22 +352,24 @@ impl FeeDistribution {
         // Reset pending and bump total_out.
         env.storage().instance().set(&KEY_PENDING, &0i128);
         let total_out: i128 = env.storage().instance().get(&KEY_TOTAL_OUT).unwrap_or(0);
-        env.storage().instance().set(&KEY_TOTAL_OUT, &(total_out + pending));
+        env.storage()
+            .instance()
+            .set(&KEY_TOTAL_OUT, &(total_out + pending));
 
         // Update per-recipient total_received in storage.
         let mut updated: Vec<Recipient> = soroban_sdk::vec![env];
         for i in 0..n {
-            let mut r = recipients.get(i as u32).unwrap();
+            let mut r = recipients.get(i).unwrap();
             let extra = if i == 0 { remainder } else { 0 };
-            r.total_received += amounts.get(i as u32).unwrap() + extra;
+            r.total_received += amounts.get(i).unwrap() + extra;
             updated.push_back(r);
         }
         env.storage().instance().set(&KEY_RECIPS, &updated);
 
         // --- Token transfers (Interactions) ----------------------------------
         for i in 0..n {
-            let r = updated.get(i as u32).unwrap();
-            let base_amt = amounts.get(i as u32).unwrap();
+            let r = updated.get(i).unwrap();
+            let base_amt = amounts.get(i).unwrap();
             let extra = if i == 0 { remainder } else { 0 };
             let payout = base_amt + extra;
             if payout > 0 {
@@ -381,7 +381,7 @@ impl FeeDistribution {
 
         env.events().publish(
             (symbol_short!("fee_dist"), symbol_short!("distrib")),
-            (pending, n as u32),
+            (pending, n),
         );
 
         Ok(pending)

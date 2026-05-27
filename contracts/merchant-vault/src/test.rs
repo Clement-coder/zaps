@@ -55,7 +55,13 @@ impl Setup {
 
         let client: MerchantVaultClient<'static> = unsafe { core::mem::transmute(client) };
 
-        Setup { env, client, admin, merchant, signers: [s0, s1, s2] }
+        Setup {
+            env,
+            client,
+            admin,
+            merchant,
+            signers: [s0, s1, s2],
+        }
     }
 }
 
@@ -157,7 +163,9 @@ fn test_is_signer_returns_false_for_unknown_address() {
 #[test]
 fn test_propose_withdrawal_creates_proposal() {
     let s = Setup::new_2_of_3();
-    let pid = s.client.propose_withdrawal(&s.merchant, &500, &s.signers[0]);
+    let pid = s
+        .client
+        .propose_withdrawal(&s.merchant, &500, &s.signers[0]);
     assert_eq!(pid, 0);
 
     let p = s.client.get_proposal(&pid);
@@ -173,8 +181,12 @@ fn test_propose_withdrawal_creates_proposal() {
 #[test]
 fn test_propose_increments_proposal_id() {
     let s = Setup::new_2_of_3();
-    let pid0 = s.client.propose_withdrawal(&s.merchant, &100, &s.signers[0]);
-    let pid1 = s.client.propose_withdrawal(&s.merchant, &200, &s.signers[1]);
+    let pid0 = s
+        .client
+        .propose_withdrawal(&s.merchant, &100, &s.signers[0]);
+    let pid1 = s
+        .client
+        .propose_withdrawal(&s.merchant, &200, &s.signers[1]);
     assert_eq!(pid0, 0);
     assert_eq!(pid1, 1);
 }
@@ -183,21 +195,27 @@ fn test_propose_increments_proposal_id() {
 fn test_propose_by_non_signer_fails() {
     let s = Setup::new_2_of_3();
     let outsider = Address::generate(&s.env);
-    let result = s.client.try_propose_withdrawal(&s.merchant, &500, &outsider);
+    let result = s
+        .client
+        .try_propose_withdrawal(&s.merchant, &500, &outsider);
     assert_eq!(result, Err(Ok(Error::NotASigner)));
 }
 
 #[test]
 fn test_propose_zero_amount_fails() {
     let s = Setup::new_2_of_3();
-    let result = s.client.try_propose_withdrawal(&s.merchant, &0, &s.signers[0]);
+    let result = s
+        .client
+        .try_propose_withdrawal(&s.merchant, &0, &s.signers[0]);
     assert_eq!(result, Err(Ok(Error::NegativeAmount)));
 }
 
 #[test]
 fn test_propose_negative_amount_fails() {
     let s = Setup::new_2_of_3();
-    let result = s.client.try_propose_withdrawal(&s.merchant, &-1, &s.signers[0]);
+    let result = s
+        .client
+        .try_propose_withdrawal(&s.merchant, &-1, &s.signers[0]);
     assert_eq!(result, Err(Ok(Error::NegativeAmount)));
 }
 
@@ -205,7 +223,9 @@ fn test_propose_negative_amount_fails() {
 fn test_propose_for_uninitialised_merchant_fails() {
     let s = Setup::new_2_of_3();
     let unknown = Address::generate(&s.env);
-    let result = s.client.try_propose_withdrawal(&unknown, &100, &s.signers[0]);
+    let result = s
+        .client
+        .try_propose_withdrawal(&unknown, &100, &s.signers[0]);
     assert_eq!(result, Err(Ok(Error::MerchantNotInitialized)));
 }
 
@@ -216,12 +236,16 @@ fn test_propose_for_uninitialised_merchant_fails() {
 #[test]
 fn test_approve_records_approval_below_threshold() {
     let s = Setup::new_2_of_3(); // threshold = 2
-    let pid = s.client.propose_withdrawal(&s.merchant, &500, &s.signers[0]);
+    let pid = s
+        .client
+        .propose_withdrawal(&s.merchant, &500, &s.signers[0]);
 
     // s0 already approved via propose; s1 approves → threshold reached → executed
     // So let's use a 3-of-3 setup to test the "below threshold" path.
     let s3 = Setup::new(3, 1_000);
-    let pid3 = s3.client.propose_withdrawal(&s3.merchant, &500, &s3.signers[0]);
+    let pid3 = s3
+        .client
+        .propose_withdrawal(&s3.merchant, &500, &s3.signers[0]);
 
     // s1 approves — 2 of 3, not yet executed.
     let executed = s3.client.approve_withdrawal(&pid3, &s3.signers[1]);
@@ -241,7 +265,9 @@ fn test_approve_records_approval_below_threshold() {
 #[test]
 fn test_approve_by_non_signer_fails() {
     let s = Setup::new_2_of_3();
-    let pid = s.client.propose_withdrawal(&s.merchant, &500, &s.signers[0]);
+    let pid = s
+        .client
+        .propose_withdrawal(&s.merchant, &500, &s.signers[0]);
     let outsider = Address::generate(&s.env);
     let result = s.client.try_approve_withdrawal(&pid, &outsider);
     assert_eq!(result, Err(Ok(Error::NotASigner)));
@@ -250,7 +276,9 @@ fn test_approve_by_non_signer_fails() {
 #[test]
 fn test_duplicate_approval_fails() {
     let s = Setup::new(3, 1_000); // 3-of-3 so we don't auto-execute
-    let pid = s.client.propose_withdrawal(&s.merchant, &500, &s.signers[0]);
+    let pid = s
+        .client
+        .propose_withdrawal(&s.merchant, &500, &s.signers[0]);
 
     // s0 already approved via propose; trying again must fail.
     let result = s.client.try_approve_withdrawal(&pid, &s.signers[0]);
@@ -271,7 +299,9 @@ fn test_approve_nonexistent_proposal_fails() {
 #[test]
 fn test_2_of_3_executes_on_second_approval() {
     let s = Setup::new_2_of_3();
-    let pid = s.client.propose_withdrawal(&s.merchant, &1_000, &s.signers[0]);
+    let pid = s
+        .client
+        .propose_withdrawal(&s.merchant, &1_000, &s.signers[0]);
 
     // s1 approves → 2 of 2 required → executed.
     let executed = s.client.approve_withdrawal(&pid, &s.signers[1]);
@@ -285,7 +315,9 @@ fn test_2_of_3_executes_on_second_approval() {
 #[test]
 fn test_3_of_3_executes_on_third_approval() {
     let s = Setup::new(3, 1_000);
-    let pid = s.client.propose_withdrawal(&s.merchant, &2_000, &s.signers[0]);
+    let pid = s
+        .client
+        .propose_withdrawal(&s.merchant, &2_000, &s.signers[0]);
 
     let executed = s.client.approve_withdrawal(&pid, &s.signers[1]);
     assert!(!executed);
@@ -304,7 +336,9 @@ fn test_1_of_3_executes_immediately_on_propose() {
     // Actually threshold=1 means the FIRST approval (the proposer's) should
     // trigger execution when approve_withdrawal is called by anyone.
     // Let's verify: propose creates 1 approval; approve by s1 → 2 ≥ 1 → executes.
-    let pid = s.client.propose_withdrawal(&s.merchant, &500, &s.signers[0]);
+    let pid = s
+        .client
+        .propose_withdrawal(&s.merchant, &500, &s.signers[0]);
     // Proposal has 1 approval (proposer). Threshold is 1 → already met.
     // approve_withdrawal by s1 would also execute (2 ≥ 1).
     // But the real test is: does a second signer's approval execute?
@@ -317,7 +351,9 @@ fn test_1_of_3_executes_immediately_on_propose() {
 fn test_execution_fails_if_insufficient_balance() {
     let s = Setup::new_2_of_3();
     // Propose more than the balance.
-    let pid = s.client.propose_withdrawal(&s.merchant, &99_999, &s.signers[0]);
+    let pid = s
+        .client
+        .propose_withdrawal(&s.merchant, &99_999, &s.signers[0]);
     let result = s.client.try_approve_withdrawal(&pid, &s.signers[1]);
     assert_eq!(result, Err(Ok(Error::InsufficientBalance)));
 }
@@ -325,7 +361,9 @@ fn test_execution_fails_if_insufficient_balance() {
 #[test]
 fn test_approve_already_executed_proposal_fails() {
     let s = Setup::new_2_of_3();
-    let pid = s.client.propose_withdrawal(&s.merchant, &100, &s.signers[0]);
+    let pid = s
+        .client
+        .propose_withdrawal(&s.merchant, &100, &s.signers[0]);
     s.client.approve_withdrawal(&pid, &s.signers[1]); // executes
 
     let result = s.client.try_approve_withdrawal(&pid, &s.signers[2]);
@@ -339,12 +377,14 @@ fn test_approve_already_executed_proposal_fails() {
 #[test]
 fn test_approve_expired_proposal_fails() {
     let s = Setup::new(2, 100); // expires after 100 ledgers
-    let pid = s.client.propose_withdrawal(&s.merchant, &500, &s.signers[0]);
+    let pid = s
+        .client
+        .propose_withdrawal(&s.merchant, &500, &s.signers[0]);
 
     // Advance ledger past expiry.
-    s.env.ledger().set_sequence_number(
-        s.env.ledger().sequence() + 101,
-    );
+    s.env
+        .ledger()
+        .set_sequence_number(s.env.ledger().sequence() + 101);
 
     let result = s.client.try_approve_withdrawal(&pid, &s.signers[1]);
     assert_eq!(result, Err(Ok(Error::ProposalExpired)));
@@ -354,7 +394,9 @@ fn test_approve_expired_proposal_fails() {
 fn test_approve_at_exact_expiry_boundary_fails() {
     let s = Setup::new(2, 100);
     let created = s.env.ledger().sequence();
-    let pid = s.client.propose_withdrawal(&s.merchant, &500, &s.signers[0]);
+    let pid = s
+        .client
+        .propose_withdrawal(&s.merchant, &500, &s.signers[0]);
 
     // Advance to exactly created + expiry_ledgers + 1 (one past the boundary).
     s.env.ledger().set_sequence_number(created + 101);
@@ -367,7 +409,9 @@ fn test_approve_at_exact_expiry_boundary_fails() {
 fn test_approve_just_before_expiry_succeeds() {
     let s = Setup::new(2, 100);
     let created = s.env.ledger().sequence();
-    let pid = s.client.propose_withdrawal(&s.merchant, &500, &s.signers[0]);
+    let pid = s
+        .client
+        .propose_withdrawal(&s.merchant, &500, &s.signers[0]);
 
     // Advance to exactly the expiry ledger (not past it).
     s.env.ledger().set_sequence_number(created + 100);
@@ -383,7 +427,9 @@ fn test_approve_just_before_expiry_succeeds() {
 #[test]
 fn test_proposer_can_cancel() {
     let s = Setup::new_2_of_3();
-    let pid = s.client.propose_withdrawal(&s.merchant, &500, &s.signers[0]);
+    let pid = s
+        .client
+        .propose_withdrawal(&s.merchant, &500, &s.signers[0]);
 
     s.client.cancel_proposal(&pid, &s.signers[0]);
 
@@ -395,7 +441,9 @@ fn test_proposer_can_cancel() {
 #[test]
 fn test_admin_can_cancel() {
     let s = Setup::new_2_of_3();
-    let pid = s.client.propose_withdrawal(&s.merchant, &500, &s.signers[0]);
+    let pid = s
+        .client
+        .propose_withdrawal(&s.merchant, &500, &s.signers[0]);
 
     s.client.cancel_proposal(&pid, &s.admin);
 
@@ -406,7 +454,9 @@ fn test_admin_can_cancel() {
 #[test]
 fn test_non_proposer_non_admin_cannot_cancel() {
     let s = Setup::new_2_of_3();
-    let pid = s.client.propose_withdrawal(&s.merchant, &500, &s.signers[0]);
+    let pid = s
+        .client
+        .propose_withdrawal(&s.merchant, &500, &s.signers[0]);
 
     // s1 is a signer but not the proposer or admin.
     let result = s.client.try_cancel_proposal(&pid, &s.signers[1]);
@@ -416,7 +466,9 @@ fn test_non_proposer_non_admin_cannot_cancel() {
 #[test]
 fn test_cancel_already_executed_fails() {
     let s = Setup::new_2_of_3();
-    let pid = s.client.propose_withdrawal(&s.merchant, &100, &s.signers[0]);
+    let pid = s
+        .client
+        .propose_withdrawal(&s.merchant, &100, &s.signers[0]);
     s.client.approve_withdrawal(&pid, &s.signers[1]); // executes
 
     let result = s.client.try_cancel_proposal(&pid, &s.signers[0]);
@@ -426,7 +478,9 @@ fn test_cancel_already_executed_fails() {
 #[test]
 fn test_cancel_already_cancelled_fails() {
     let s = Setup::new_2_of_3();
-    let pid = s.client.propose_withdrawal(&s.merchant, &500, &s.signers[0]);
+    let pid = s
+        .client
+        .propose_withdrawal(&s.merchant, &500, &s.signers[0]);
     s.client.cancel_proposal(&pid, &s.signers[0]);
 
     let result = s.client.try_cancel_proposal(&pid, &s.signers[0]);
@@ -436,7 +490,9 @@ fn test_cancel_already_cancelled_fails() {
 #[test]
 fn test_approve_cancelled_proposal_fails() {
     let s = Setup::new_2_of_3();
-    let pid = s.client.propose_withdrawal(&s.merchant, &500, &s.signers[0]);
+    let pid = s
+        .client
+        .propose_withdrawal(&s.merchant, &500, &s.signers[0]);
     s.client.cancel_proposal(&pid, &s.signers[0]);
 
     let result = s.client.try_approve_withdrawal(&pid, &s.signers[1]);
@@ -446,7 +502,9 @@ fn test_approve_cancelled_proposal_fails() {
 #[test]
 fn test_cancel_does_not_affect_balance() {
     let s = Setup::new_2_of_3();
-    let pid = s.client.propose_withdrawal(&s.merchant, &5_000, &s.signers[0]);
+    let pid = s
+        .client
+        .propose_withdrawal(&s.merchant, &5_000, &s.signers[0]);
     s.client.cancel_proposal(&pid, &s.signers[0]);
 
     // Balance must be unchanged.
@@ -461,8 +519,12 @@ fn test_cancel_does_not_affect_balance() {
 fn test_multiple_proposals_independent() {
     let s = Setup::new_2_of_3();
 
-    let pid0 = s.client.propose_withdrawal(&s.merchant, &1_000, &s.signers[0]);
-    let pid1 = s.client.propose_withdrawal(&s.merchant, &2_000, &s.signers[1]);
+    let pid0 = s
+        .client
+        .propose_withdrawal(&s.merchant, &1_000, &s.signers[0]);
+    let pid1 = s
+        .client
+        .propose_withdrawal(&s.merchant, &2_000, &s.signers[1]);
 
     // Execute pid0.
     s.client.approve_withdrawal(&pid0, &s.signers[1]);
@@ -481,8 +543,12 @@ fn test_multiple_proposals_independent() {
 fn test_cancel_one_does_not_affect_other() {
     let s = Setup::new_2_of_3();
 
-    let pid0 = s.client.propose_withdrawal(&s.merchant, &1_000, &s.signers[0]);
-    let pid1 = s.client.propose_withdrawal(&s.merchant, &2_000, &s.signers[1]);
+    let pid0 = s
+        .client
+        .propose_withdrawal(&s.merchant, &1_000, &s.signers[0]);
+    let pid1 = s
+        .client
+        .propose_withdrawal(&s.merchant, &2_000, &s.signers[1]);
 
     s.client.cancel_proposal(&pid0, &s.signers[0]);
 
@@ -497,14 +563,17 @@ fn test_cancel_one_does_not_affect_other() {
 
 #[test]
 fn test_propose_emits_proposed_event() {
-    use soroban_sdk::{testutils::Events, TryFromVal, Symbol};
+    use soroban_sdk::{testutils::Events, Symbol, TryFromVal};
 
     let s = Setup::new_2_of_3();
-    s.client.propose_withdrawal(&s.merchant, &500, &s.signers[0]);
+    s.client
+        .propose_withdrawal(&s.merchant, &500, &s.signers[0]);
 
     let events = s.env.events().all();
     let found = events.iter().any(|(_, topics, _)| {
-        if topics.len() != 2 { return false; }
+        if topics.len() != 2 {
+            return false;
+        }
         let t0 = <Symbol as TryFromVal<Env, _>>::try_from_val(&s.env, &topics.get(0).unwrap());
         let t1 = <Symbol as TryFromVal<Env, _>>::try_from_val(&s.env, &topics.get(1).unwrap());
         matches!((t0, t1), (Ok(a), Ok(b))
@@ -515,15 +584,19 @@ fn test_propose_emits_proposed_event() {
 
 #[test]
 fn test_execute_emits_executed_event() {
-    use soroban_sdk::{testutils::Events, TryFromVal, Symbol};
+    use soroban_sdk::{testutils::Events, Symbol, TryFromVal};
 
     let s = Setup::new_2_of_3();
-    let pid = s.client.propose_withdrawal(&s.merchant, &500, &s.signers[0]);
+    let pid = s
+        .client
+        .propose_withdrawal(&s.merchant, &500, &s.signers[0]);
     s.client.approve_withdrawal(&pid, &s.signers[1]);
 
     let events = s.env.events().all();
     let found = events.iter().any(|(_, topics, _)| {
-        if topics.len() != 2 { return false; }
+        if topics.len() != 2 {
+            return false;
+        }
         let t0 = <Symbol as TryFromVal<Env, _>>::try_from_val(&s.env, &topics.get(0).unwrap());
         let t1 = <Symbol as TryFromVal<Env, _>>::try_from_val(&s.env, &topics.get(1).unwrap());
         matches!((t0, t1), (Ok(a), Ok(b))
@@ -534,15 +607,19 @@ fn test_execute_emits_executed_event() {
 
 #[test]
 fn test_cancel_emits_cancelled_event() {
-    use soroban_sdk::{testutils::Events, TryFromVal, Symbol};
+    use soroban_sdk::{testutils::Events, Symbol, TryFromVal};
 
     let s = Setup::new_2_of_3();
-    let pid = s.client.propose_withdrawal(&s.merchant, &500, &s.signers[0]);
+    let pid = s
+        .client
+        .propose_withdrawal(&s.merchant, &500, &s.signers[0]);
     s.client.cancel_proposal(&pid, &s.signers[0]);
 
     let events = s.env.events().all();
     let found = events.iter().any(|(_, topics, _)| {
-        if topics.len() != 2 { return false; }
+        if topics.len() != 2 {
+            return false;
+        }
         let t0 = <Symbol as TryFromVal<Env, _>>::try_from_val(&s.env, &topics.get(0).unwrap());
         let t1 = <Symbol as TryFromVal<Env, _>>::try_from_val(&s.env, &topics.get(1).unwrap());
         matches!((t0, t1), (Ok(a), Ok(b))
