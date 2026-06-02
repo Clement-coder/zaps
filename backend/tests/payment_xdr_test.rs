@@ -1,7 +1,6 @@
 // Integration tests for non-custodial payment XDRs and fee sponsorship
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
 
     // Mock the SorobanService to test XDR logic
     #[test]
@@ -63,16 +62,12 @@ mod tests {
         let to = "GMERCHANT_ADDRESS_56_CHARS_LONG_1234567890ABCDEFGH123456";
         let asset = "XLM";
         let amount: i64 = 1_000_000;
-        let memo = Some("Invoice #123");
+        let memo = "Invoice #123";
 
         // Construct expected JSON payload
         let payload = format!(
             r#"{{"type":"payment","from":"{}","to":"{}","asset":"{}","amount":{},"memo":"{}"}}"#,
-            from,
-            to,
-            asset,
-            amount,
-            memo.unwrap_or("")
+            from, to, asset, amount, memo
         );
 
         assert!(
@@ -92,15 +87,11 @@ mod tests {
         let to = "GMERCHANT_ADDRESS_56_CHARS_LONG_1234567890ABCDEFGH123456";
         let asset = "USDC:GBBD47UZQ5DSFGKZH3SYGU5HOCF7DH7V7TEOED4QOWNFTQNG5DJOHEZJ";
         let amount: i64 = 5_000_000;
-        let memo = None;
+        let memo = "";
 
         let payload = format!(
             r#"{{"type":"payment","from":"{}","to":"{}","asset":"{}","amount":{},"memo":"{}"}}"#,
-            from,
-            to,
-            asset,
-            amount,
-            memo.unwrap_or("")
+            from, to, asset, amount, memo
         );
 
         assert!(payload.contains("USDC"), "XDR should contain USDC code");
@@ -145,7 +136,7 @@ mod tests {
         // Test that XDR is base64 encoded
         let text = r#"{"type":"payment","asset":"XLM","amount":1000000}"#;
         // Base64 encoding produces roughly 4/3 the original size
-        let est_encoded_len = ((text.len() + 2) / 3) * 4;
+        let est_encoded_len = text.len().saturating_add(2).div_ceil(3).saturating_mul(4);
         assert!(est_encoded_len > 0, "Base64 encoding should produce output");
         assert!(
             est_encoded_len >= text.len(),
@@ -184,6 +175,7 @@ mod tests {
     }
 
     // Helper functions
+    #[allow(dead_code)]
     fn base64_encode(text: &str) -> String {
         // In real implementation, use base64 crate
         format!("encoded_{}", text.len())

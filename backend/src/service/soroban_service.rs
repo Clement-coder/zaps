@@ -78,7 +78,7 @@ impl SorobanService {
             .stellar_network
             .fee_payer_secret
             .clone()
-            .map(|s| CustodialSigner::new(s));
+            .map(CustodialSigner::new);
 
         Self {
             config,

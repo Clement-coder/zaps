@@ -1,10 +1,10 @@
+use crate::service::MetricsService;
 use axum::{
     extract::Request,
     http::{header::HeaderName, HeaderValue},
     middleware::Next,
     response::Response,
 };
-use crate::service::MetricsService;
 
 /// Supported API versions
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -72,10 +72,7 @@ pub async fn version_middleware(request: Request, next: Next) -> Response {
 
     // Always inject the resolved version
     if let Ok(val) = HeaderValue::from_str(version.as_str()) {
-        headers.insert(
-            HeaderName::from_static("x-api-version"),
-            val,
-        );
+        headers.insert(HeaderName::from_static("x-api-version"), val);
     }
 
     // Inject deprecation headers when applicable
@@ -128,8 +125,14 @@ mod tests {
 
     #[test]
     fn test_extract_version_from_path() {
-        assert_eq!(extract_version_from_path("/api/v1/payments"), ApiVersion::V1);
-        assert_eq!(extract_version_from_path("/api/v2/payments"), ApiVersion::V2);
+        assert_eq!(
+            extract_version_from_path("/api/v1/payments"),
+            ApiVersion::V1
+        );
+        assert_eq!(
+            extract_version_from_path("/api/v2/payments"),
+            ApiVersion::V2
+        );
         assert_eq!(extract_version_from_path("/health"), ApiVersion::V1); // default
     }
 

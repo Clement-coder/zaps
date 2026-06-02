@@ -25,8 +25,8 @@
 //! `B_own + A_own`.  B cannot re-delegate A's power.
 
 use soroban_sdk::{
-    contract, contracterror, contractimpl, contracttype, panic_with_error, symbol_short,
-    Address, Bytes, Env,
+    contract, contracterror, contractimpl, contracttype, panic_with_error, symbol_short, Address,
+    Bytes, Env,
 };
 
 // ---------------------------------------------------------------------------
@@ -402,12 +402,7 @@ impl GovernanceContract {
     /// * `description`  – human-readable description bytes
     ///
     /// Returns the new proposal ID.
-    pub fn propose(
-        env: Env,
-        proposer: Address,
-        payload: Bytes,
-        description: Bytes,
-    ) -> u64 {
+    pub fn propose(env: Env, proposer: Address, payload: Bytes, description: Bytes) -> u64 {
         proposer.require_auth();
         bump_instance(&env);
 
@@ -440,11 +435,17 @@ impl GovernanceContract {
         };
 
         save_proposal(&env, &proposal);
-        env.storage().instance().set(&Key::ProposalCounter, &next_id);
+        env.storage()
+            .instance()
+            .set(&Key::ProposalCounter, &next_id);
 
         env.events().publish(
             (symbol_short!("gov"), symbol_short!("proposed")),
-            (next_id, proposer, current_ledger + config.voting_period_ledgers),
+            (
+                next_id,
+                proposer,
+                current_ledger + config.voting_period_ledgers,
+            ),
         );
 
         next_id
@@ -515,8 +516,7 @@ impl GovernanceContract {
         }
 
         // Check quorum.
-        let total_votes =
-            proposal.for_votes + proposal.against_votes + proposal.abstain_votes;
+        let total_votes = proposal.for_votes + proposal.against_votes + proposal.abstain_votes;
         if total_votes < config.quorum_votes {
             panic_with_error!(env, GovError::QuorumNotMet);
         }
@@ -601,10 +601,8 @@ impl GovernanceContract {
     pub fn transfer_admin(env: Env, new_admin: Address) {
         require_admin(&env);
         env.storage().instance().set(&Key::Admin, &new_admin);
-        env.events().publish(
-            (symbol_short!("gov"), symbol_short!("adm_xfer")),
-            new_admin,
-        );
+        env.events()
+            .publish((symbol_short!("gov"), symbol_short!("adm_xfer")), new_admin);
     }
 
     pub fn upgrade(env: Env, new_wasm_hash: soroban_sdk::BytesN<32>) {

@@ -240,11 +240,7 @@ impl SubscriptionPayments {
             panic_with_error!(env, SubError::InvalidInterval);
         }
 
-        let plan_id: u64 = env
-            .storage()
-            .instance()
-            .get(&Key::PlanCounter)
-            .unwrap_or(0);
+        let plan_id: u64 = env.storage().instance().get(&Key::PlanCounter).unwrap_or(0);
         let next_id = plan_id + 1;
 
         let plan = Plan {
@@ -278,10 +274,8 @@ impl SubscriptionPayments {
         env.storage().persistent().set(&Key::Plan(plan_id), &plan);
         bump_persistent(&env, &Key::Plan(plan_id));
 
-        env.events().publish(
-            (symbol_short!("sub"), symbol_short!("plan_off")),
-            plan_id,
-        );
+        env.events()
+            .publish((symbol_short!("sub"), symbol_short!("plan_off")), plan_id);
     }
 
     // -----------------------------------------------------------------------
@@ -308,11 +302,7 @@ impl SubscriptionPayments {
         // Execute first payment immediately.
         let success = try_pull(&env, &plan.token, &subscriber, &plan.merchant, plan.amount);
 
-        let sub_id: u64 = env
-            .storage()
-            .instance()
-            .get(&Key::SubCounter)
-            .unwrap_or(0);
+        let sub_id: u64 = env.storage().instance().get(&Key::SubCounter).unwrap_or(0);
         let next_sub_id = sub_id + 1;
 
         let current_ledger = env.ledger().sequence();
@@ -471,10 +461,8 @@ impl SubscriptionPayments {
     pub fn transfer_admin(env: Env, new_admin: Address) {
         require_admin(&env);
         env.storage().instance().set(&Key::Admin, &new_admin);
-        env.events().publish(
-            (symbol_short!("sub"), symbol_short!("adm_xfer")),
-            new_admin,
-        );
+        env.events()
+            .publish((symbol_short!("sub"), symbol_short!("adm_xfer")), new_admin);
     }
 
     // -----------------------------------------------------------------------

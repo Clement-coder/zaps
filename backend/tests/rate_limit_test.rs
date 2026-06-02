@@ -1,17 +1,19 @@
-use std::time::Duration;
 use blinks_backend::config::Config;
 use blinks_backend::models::{RateLimitConfig, RateLimitScope};
 use blinks_backend::service::RateLimitService;
+use std::time::Duration;
 
 #[tokio::test]
 async fn test_rate_limit_enforcement() {
-    let mut config = Config::default();
-    config.rate_limit = RateLimitConfig {
-        window_ms: 1000,
-        max_requests: 2,
-        scope: RateLimitScope::Ip,
-        endpoint_limits: vec![],
-        bypass_admin: true,
+    let config = Config {
+        rate_limit: RateLimitConfig {
+            window_ms: 1000,
+            max_requests: 2,
+            scope: RateLimitScope::Ip,
+            endpoint_limits: vec![],
+            bypass_admin: true,
+        },
+        ..Default::default()
     };
 
     let rate_limit_service = RateLimitService::new(config).await;
@@ -37,13 +39,15 @@ async fn test_rate_limit_enforcement() {
 
 #[tokio::test]
 async fn test_rate_limit_expiry() {
-    let mut config = Config::default();
-    config.rate_limit = RateLimitConfig {
-        window_ms: 200,
-        max_requests: 1,
-        scope: RateLimitScope::Ip,
-        endpoint_limits: vec![],
-        bypass_admin: true,
+    let config = Config {
+        rate_limit: RateLimitConfig {
+            window_ms: 200,
+            max_requests: 1,
+            scope: RateLimitScope::Ip,
+            endpoint_limits: vec![],
+            bypass_admin: true,
+        },
+        ..Default::default()
     };
 
     let rate_limit_service = RateLimitService::new(config).await;
@@ -69,13 +73,15 @@ async fn test_rate_limit_expiry() {
 
 #[tokio::test]
 async fn test_independent_limits() {
-    let mut config = Config::default();
-    config.rate_limit = RateLimitConfig {
-        window_ms: 1000,
-        max_requests: 1,
-        scope: RateLimitScope::Ip,
-        endpoint_limits: vec![],
-        bypass_admin: true,
+    let config = Config {
+        rate_limit: RateLimitConfig {
+            window_ms: 1000,
+            max_requests: 1,
+            scope: RateLimitScope::Ip,
+            endpoint_limits: vec![],
+            bypass_admin: true,
+        },
+        ..Default::default()
     };
 
     let rate_limit_service = RateLimitService::new(config).await;
@@ -85,26 +91,34 @@ async fn test_independent_limits() {
     let scope = RateLimitScope::Ip;
 
     // Key1 uses its quota
-    let decision1 = rate_limit_service.check_rate_limit(key1, path, &scope).await;
+    let decision1 = rate_limit_service
+        .check_rate_limit(key1, path, &scope)
+        .await;
     assert!(decision1.allowed);
-    
-    let decision2 = rate_limit_service.check_rate_limit(key1, path, &scope).await;
+
+    let decision2 = rate_limit_service
+        .check_rate_limit(key1, path, &scope)
+        .await;
     assert!(!decision2.allowed);
 
     // Key2 should still be allowed
-    let decision3 = rate_limit_service.check_rate_limit(key2, path, &scope).await;
+    let decision3 = rate_limit_service
+        .check_rate_limit(key2, path, &scope)
+        .await;
     assert!(decision3.allowed);
 }
 
 #[tokio::test]
 async fn test_sliding_window_burst() {
-    let mut config = Config::default();
-    config.rate_limit = RateLimitConfig {
-        window_ms: 300,
-        max_requests: 2,
-        scope: RateLimitScope::Ip,
-        endpoint_limits: vec![],
-        bypass_admin: true,
+    let config = Config {
+        rate_limit: RateLimitConfig {
+            window_ms: 300,
+            max_requests: 2,
+            scope: RateLimitScope::Ip,
+            endpoint_limits: vec![],
+            bypass_admin: true,
+        },
+        ..Default::default()
     };
 
     let rate_limit_service = RateLimitService::new(config).await;
@@ -113,24 +127,49 @@ async fn test_sliding_window_burst() {
     let scope = RateLimitScope::Ip;
 
     // Request 1 at t=0ms (allowed)
-    assert!(rate_limit_service.check_rate_limit(key, path, &scope).await.allowed);
+    assert!(
+        rate_limit_service
+            .check_rate_limit(key, path, &scope)
+            .await
+            .allowed
+    );
 
     // Sleep 100ms
     tokio::time::sleep(Duration::from_millis(100)).await;
 
     // Request 2 at t=100ms (allowed)
-    assert!(rate_limit_service.check_rate_limit(key, path, &scope).await.allowed);
+    assert!(
+        rate_limit_service
+            .check_rate_limit(key, path, &scope)
+            .await
+            .allowed
+    );
 
     // Request 3 at t=120ms (blocked - limit of 2 reached)
-    assert!(!rate_limit_service.check_rate_limit(key, path, &scope).await.allowed);
+    assert!(
+        !rate_limit_service
+            .check_rate_limit(key, path, &scope)
+            .await
+            .allowed
+    );
 
     // Sleep 250ms (total time ~350ms).
     // Request 1 (at t=0ms) has fallen out of the 300ms window, but Request 2 (at t=100ms) is still inside (100ms + 300ms = 400ms expiry).
     tokio::time::sleep(Duration::from_millis(250)).await;
 
     // Request 4 at t=350ms should pass since only Request 2 is active in the window
-    assert!(rate_limit_service.check_rate_limit(key, path, &scope).await.allowed);
+    assert!(
+        rate_limit_service
+            .check_rate_limit(key, path, &scope)
+            .await
+            .allowed
+    );
 
     // Request 5 at t=360ms should fail since both Request 2 and Request 4 are active
-    assert!(!rate_limit_service.check_rate_limit(key, path, &scope).await.allowed);
+    assert!(
+        !rate_limit_service
+            .check_rate_limit(key, path, &scope)
+            .await
+            .allowed
+    );
 }

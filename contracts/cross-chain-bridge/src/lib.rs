@@ -38,9 +38,8 @@
 //! - Checks-Effects-Interactions ordering throughout.
 
 use soroban_sdk::{
-    contract, contracterror, contractimpl, contracttype,
-    symbol_short, token::Client as TokenClient,
-    Address, Bytes, Env, Symbol, Vec,
+    contract, contracterror, contractimpl, contracttype, symbol_short,
+    token::Client as TokenClient, Address, Bytes, Env, Symbol,
 };
 
 // ---------------------------------------------------------------------------
@@ -110,9 +109,9 @@ pub struct OutboundTransfer {
 #[contracttype]
 #[derive(Clone)]
 pub enum DataKey {
-    Relayer(Address),       // relayer whitelist entry
-    UsedNonce(Bytes),       // inbound replay-protection nonce
-    Outbound(u64),          // outbound transfer record
+    Relayer(Address), // relayer whitelist entry
+    UsedNonce(Bytes), // inbound replay-protection nonce
+    Outbound(u64),    // outbound transfer record
 }
 
 // ---------------------------------------------------------------------------
@@ -146,7 +145,12 @@ pub enum BridgeError {
 // ---------------------------------------------------------------------------
 
 fn require_not_paused(env: &Env) {
-    if env.storage().instance().get::<Symbol, bool>(&KEY_PAUSED).unwrap_or(false) {
+    if env
+        .storage()
+        .instance()
+        .get::<Symbol, bool>(&KEY_PAUSED)
+        .unwrap_or(false)
+    {
         soroban_sdk::panic_with_error!(env, BridgeError::ContractPaused);
     }
 }
@@ -191,7 +195,11 @@ fn parse_chain(env: &Env, chain: &Symbol) -> Chain {
 
 fn validate_amount(env: &Env, amount: i128) {
     let min: i128 = env.storage().instance().get(&KEY_MIN_AMT).unwrap_or(1);
-    let max: i128 = env.storage().instance().get(&KEY_MAX_AMT).unwrap_or(i128::MAX);
+    let max: i128 = env
+        .storage()
+        .instance()
+        .get(&KEY_MAX_AMT)
+        .unwrap_or(i128::MAX);
     if amount < min {
         soroban_sdk::panic_with_error!(env, BridgeError::AmountTooLow);
     }
@@ -208,7 +216,12 @@ fn validate_dest_address(env: &Env, addr: &Bytes) {
 }
 
 fn reentrancy_enter(env: &Env) {
-    if env.storage().instance().get::<Symbol, bool>(&KEY_LOCKED).unwrap_or(false) {
+    if env
+        .storage()
+        .instance()
+        .get::<Symbol, bool>(&KEY_LOCKED)
+        .unwrap_or(false)
+    {
         soroban_sdk::panic_with_error!(env, BridgeError::Reentrant);
     }
     env.storage().instance().set(&KEY_LOCKED, &true);
@@ -233,7 +246,6 @@ pub struct CrossChainBridge;
 
 #[contractimpl]
 impl CrossChainBridge {
-
     // -----------------------------------------------------------------------
     // Initialisation
     // -----------------------------------------------------------------------
@@ -281,27 +293,33 @@ impl CrossChainBridge {
     pub fn add_relayer(env: Env, relayer: Address) {
         require_admin(&env);
         let key = DataKey::Relayer(relayer.clone());
-        if env.storage().persistent().get::<DataKey, bool>(&key).unwrap_or(false) {
+        if env
+            .storage()
+            .persistent()
+            .get::<DataKey, bool>(&key)
+            .unwrap_or(false)
+        {
             soroban_sdk::panic_with_error!(env, BridgeError::RelayerAlreadyAdded);
         }
         env.storage().persistent().set(&key, &true);
-        env.events().publish(
-            (symbol_short!("bridge"), symbol_short!("rly_add")),
-            relayer,
-        );
+        env.events()
+            .publish((symbol_short!("bridge"), symbol_short!("rly_add")), relayer);
     }
 
     pub fn remove_relayer(env: Env, relayer: Address) {
         require_admin(&env);
         let key = DataKey::Relayer(relayer.clone());
-        if !env.storage().persistent().get::<DataKey, bool>(&key).unwrap_or(false) {
+        if !env
+            .storage()
+            .persistent()
+            .get::<DataKey, bool>(&key)
+            .unwrap_or(false)
+        {
             soroban_sdk::panic_with_error!(env, BridgeError::RelayerNotFound);
         }
         env.storage().persistent().remove(&key);
-        env.events().publish(
-            (symbol_short!("bridge"), symbol_short!("rly_rm")),
-            relayer,
-        );
+        env.events()
+            .publish((symbol_short!("bridge"), symbol_short!("rly_rm")), relayer);
     }
 
     // -----------------------------------------------------------------------
@@ -311,19 +329,15 @@ impl CrossChainBridge {
     pub fn pause(env: Env) {
         require_admin(&env);
         env.storage().instance().set(&KEY_PAUSED, &true);
-        env.events().publish(
-            (symbol_short!("bridge"), symbol_short!("paused")),
-            (),
-        );
+        env.events()
+            .publish((symbol_short!("bridge"), symbol_short!("paused")), ());
     }
 
     pub fn unpause(env: Env) {
         require_admin(&env);
         env.storage().instance().set(&KEY_PAUSED, &false);
-        env.events().publish(
-            (symbol_short!("bridge"), symbol_short!("unpaused")),
-            (),
-        );
+        env.events()
+            .publish((symbol_short!("bridge"), symbol_short!("unpaused")), ());
     }
 
     // -----------------------------------------------------------------------
@@ -389,12 +403,17 @@ impl CrossChainBridge {
         env.storage().persistent().set(&nonce_key, &true);
 
         let tot_in: i128 = env.storage().instance().get(&KEY_TOT_IN).unwrap_or(0);
-        env.storage().instance().set(&KEY_TOT_IN, &(tot_in + amount));
+        env.storage()
+            .instance()
+            .set(&KEY_TOT_IN, &(tot_in + amount));
 
         // --- Interaction (token transfer) -----------------------------------
         let token: Address = env.storage().instance().get(&KEY_TOKEN).unwrap();
-        TokenClient::new(&env, &token)
-            .transfer(&env.current_contract_address(), &recipient, &amount);
+        TokenClient::new(&env, &token).transfer(
+            &env.current_contract_address(),
+            &recipient,
+            &amount,
+        );
 
         reentrancy_exit(&env);
 
@@ -435,7 +454,10 @@ impl CrossChainBridge {
 
         let id = next_outbound_id(&env);
         let created = env.ledger().sequence();
-        let timeout_ledgers: u32 = env.storage().instance().get(&KEY_TIMEOUT)
+        let timeout_ledgers: u32 = env
+            .storage()
+            .instance()
+            .get(&KEY_TIMEOUT)
             .unwrap_or(OUTBOUND_TIMEOUT_LEDGERS);
         let timeout = created + timeout_ledgers;
 
@@ -451,7 +473,9 @@ impl CrossChainBridge {
         };
 
         // Effects: persist record before token transfer.
-        env.storage().persistent().set(&DataKey::Outbound(id), &transfer);
+        env.storage()
+            .persistent()
+            .set(&DataKey::Outbound(id), &transfer);
         // Extend TTL well beyond the timeout so the entry survives until refund.
         env.storage().persistent().extend_ttl(
             &DataKey::Outbound(id),
@@ -460,12 +484,13 @@ impl CrossChainBridge {
         );
 
         let tot_out: i128 = env.storage().instance().get(&KEY_TOT_OUT).unwrap_or(0);
-        env.storage().instance().set(&KEY_TOT_OUT, &(tot_out + amount));
+        env.storage()
+            .instance()
+            .set(&KEY_TOT_OUT, &(tot_out + amount));
 
         // Interaction: pull tokens from sender.
         let token: Address = env.storage().instance().get(&KEY_TOKEN).unwrap();
-        TokenClient::new(&env, &token)
-            .transfer(&sender, &env.current_contract_address(), &amount);
+        TokenClient::new(&env, &token).transfer(&sender, &env.current_contract_address(), &amount);
 
         reentrancy_exit(&env);
 
@@ -488,11 +513,10 @@ impl CrossChainBridge {
         env.storage().instance().extend_ttl(200_000, 6_307_200);
 
         let key = DataKey::Outbound(transfer_id);
-        let mut transfer: OutboundTransfer = env
-            .storage()
-            .persistent()
-            .get(&key)
-            .unwrap_or_else(|| soroban_sdk::panic_with_error!(env, BridgeError::TransferNotFound));
+        let mut transfer: OutboundTransfer =
+            env.storage().persistent().get(&key).unwrap_or_else(|| {
+                soroban_sdk::panic_with_error!(env, BridgeError::TransferNotFound)
+            });
 
         if transfer.status != OutboundStatus::Pending {
             soroban_sdk::panic_with_error!(env, BridgeError::TransferNotPending);
@@ -505,8 +529,14 @@ impl CrossChainBridge {
 
         transfer.status = OutboundStatus::Confirmed;
         env.storage().persistent().set(&key, &transfer);
-        let t: u32 = env.storage().instance().get(&KEY_TIMEOUT).unwrap_or(OUTBOUND_TIMEOUT_LEDGERS);
-        env.storage().persistent().extend_ttl(&key, t + 1, t * 2 + 1);
+        let t: u32 = env
+            .storage()
+            .instance()
+            .get(&KEY_TIMEOUT)
+            .unwrap_or(OUTBOUND_TIMEOUT_LEDGERS);
+        env.storage()
+            .persistent()
+            .extend_ttl(&key, t + 1, t * 2 + 1);
 
         env.events().publish(
             (symbol_short!("bridge"), symbol_short!("confirmed")),
@@ -523,11 +553,10 @@ impl CrossChainBridge {
         env.storage().instance().extend_ttl(200_000, 6_307_200);
 
         let key = DataKey::Outbound(transfer_id);
-        let mut transfer: OutboundTransfer = env
-            .storage()
-            .persistent()
-            .get(&key)
-            .unwrap_or_else(|| soroban_sdk::panic_with_error!(env, BridgeError::TransferNotFound));
+        let mut transfer: OutboundTransfer =
+            env.storage().persistent().get(&key).unwrap_or_else(|| {
+                soroban_sdk::panic_with_error!(env, BridgeError::TransferNotFound)
+            });
 
         if transfer.status != OutboundStatus::Pending {
             soroban_sdk::panic_with_error!(env, BridgeError::TransferNotPending);
@@ -542,13 +571,22 @@ impl CrossChainBridge {
         // Effects before interaction.
         transfer.status = OutboundStatus::Refunded;
         env.storage().persistent().set(&key, &transfer);
-        let t: u32 = env.storage().instance().get(&KEY_TIMEOUT).unwrap_or(OUTBOUND_TIMEOUT_LEDGERS);
-        env.storage().persistent().extend_ttl(&key, t + 1, t * 2 + 1);
+        let t: u32 = env
+            .storage()
+            .instance()
+            .get(&KEY_TIMEOUT)
+            .unwrap_or(OUTBOUND_TIMEOUT_LEDGERS);
+        env.storage()
+            .persistent()
+            .extend_ttl(&key, t + 1, t * 2 + 1);
 
         // Interaction: return tokens to original sender.
         let token: Address = env.storage().instance().get(&KEY_TOKEN).unwrap();
-        TokenClient::new(&env, &token)
-            .transfer(&env.current_contract_address(), &transfer.sender, &transfer.amount);
+        TokenClient::new(&env, &token).transfer(
+            &env.current_contract_address(),
+            &transfer.sender,
+            &transfer.amount,
+        );
 
         reentrancy_exit(&env);
 

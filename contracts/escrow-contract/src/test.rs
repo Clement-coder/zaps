@@ -3,14 +3,20 @@
 use super::*;
 use soroban_sdk::{
     testutils::{Address as _, Ledger},
-    token, Address, Env, BytesN,
+    token, Address, BytesN, Env,
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 /// Spin up a fresh environment with a registered escrow contract and a funded
 /// SAC token.  Returns `(env, client, buyer, seller, token_address)`.
-fn setup() -> (Env, EscrowContractClient<'static>, Address, Address, Address) {
+fn setup() -> (
+    Env,
+    EscrowContractClient<'static>,
+    Address,
+    Address,
+    Address,
+) {
     let env = Env::default();
     env.mock_all_auths();
 
@@ -49,7 +55,15 @@ fn test_lock_funds_success() {
     let escrow_id = make_id(&env, 1);
     let amount: i128 = 1_000_000;
 
-    client.lock_funds(&escrow_id, &buyer, &seller, &token, &amount, &1_000_000, &zero_memo(&env));
+    client.lock_funds(
+        &escrow_id,
+        &buyer,
+        &seller,
+        &token,
+        &amount,
+        &1_000_000,
+        &zero_memo(&env),
+    );
 
     let stored = client.get_escrow(&escrow_id);
     assert_eq!(stored.buyer, buyer);
@@ -67,10 +81,24 @@ fn test_lock_funds_duplicate_id_fails() {
     let escrow_id = make_id(&env, 2);
     let amount: i128 = 500_000;
 
-    client.lock_funds(&escrow_id, &buyer, &seller, &token, &amount, &1_000_000, &zero_memo(&env));
+    client.lock_funds(
+        &escrow_id,
+        &buyer,
+        &seller,
+        &token,
+        &amount,
+        &1_000_000,
+        &zero_memo(&env),
+    );
 
     let result = client.try_lock_funds(
-        &escrow_id, &buyer, &seller, &token, &amount, &1_000_000, &zero_memo(&env),
+        &escrow_id,
+        &buyer,
+        &seller,
+        &token,
+        &amount,
+        &1_000_000,
+        &zero_memo(&env),
     );
     assert!(result.is_err());
 }
@@ -80,7 +108,13 @@ fn test_lock_funds_zero_amount_fails() {
     let (env, client, buyer, seller, token) = setup();
 
     let result = client.try_lock_funds(
-        &make_id(&env, 3), &buyer, &seller, &token, &0, &1_000_000, &zero_memo(&env),
+        &make_id(&env, 3),
+        &buyer,
+        &seller,
+        &token,
+        &0,
+        &1_000_000,
+        &zero_memo(&env),
     );
     assert!(result.is_err());
 }
@@ -92,7 +126,15 @@ fn test_release_funds_by_seller_success() {
     let (env, client, buyer, seller, token) = setup();
 
     let escrow_id = make_id(&env, 4);
-    client.lock_funds(&escrow_id, &buyer, &seller, &token, &750_000, &1_000_000, &zero_memo(&env));
+    client.lock_funds(
+        &escrow_id,
+        &buyer,
+        &seller,
+        &token,
+        &750_000,
+        &1_000_000,
+        &zero_memo(&env),
+    );
     client.release_funds(&escrow_id, &seller);
 
     let stored = client.get_escrow(&escrow_id);
@@ -107,7 +149,15 @@ fn test_release_funds_unauthorized_fails() {
     let random_caller = Address::generate(&env);
     let escrow_id = make_id(&env, 5);
 
-    client.lock_funds(&escrow_id, &buyer, &seller, &token, &300_000, &1_000_000, &zero_memo(&env));
+    client.lock_funds(
+        &escrow_id,
+        &buyer,
+        &seller,
+        &token,
+        &300_000,
+        &1_000_000,
+        &zero_memo(&env),
+    );
 
     let result = client.try_release_funds(&escrow_id, &random_caller);
     assert!(result.is_err());
@@ -118,7 +168,15 @@ fn test_release_already_released_fails() {
     let (env, client, buyer, seller, token) = setup();
 
     let escrow_id = make_id(&env, 14);
-    client.lock_funds(&escrow_id, &buyer, &seller, &token, &100_000, &1_000_000, &zero_memo(&env));
+    client.lock_funds(
+        &escrow_id,
+        &buyer,
+        &seller,
+        &token,
+        &100_000,
+        &1_000_000,
+        &zero_memo(&env),
+    );
     client.release_funds(&escrow_id, &seller);
 
     // Second release must fail – funds are gone and state is Released.
@@ -133,7 +191,15 @@ fn test_refund_funds_by_buyer_after_timeout_success() {
     let (env, client, buyer, seller, token) = setup();
 
     let escrow_id = make_id(&env, 6);
-    client.lock_funds(&escrow_id, &buyer, &seller, &token, &1_200_000, &1_000_000, &zero_memo(&env));
+    client.lock_funds(
+        &escrow_id,
+        &buyer,
+        &seller,
+        &token,
+        &1_200_000,
+        &1_000_000,
+        &zero_memo(&env),
+    );
 
     let creation_time = env.ledger().timestamp();
     env.ledger().set_timestamp(creation_time + 8 * 24 * 60 * 60);
@@ -152,7 +218,15 @@ fn test_refund_before_timeout_only_by_buyer_or_arbitrator() {
     let random_caller = Address::generate(&env);
     let escrow_id = make_id(&env, 7);
 
-    client.lock_funds(&escrow_id, &buyer, &seller, &token, &900_000, &1_000_000, &zero_memo(&env));
+    client.lock_funds(
+        &escrow_id,
+        &buyer,
+        &seller,
+        &token,
+        &900_000,
+        &1_000_000,
+        &zero_memo(&env),
+    );
 
     // Random caller before timeout → should fail.
     let result = client.try_refund_funds(&escrow_id, &random_caller);
@@ -168,7 +242,15 @@ fn test_refund_already_refunded_fails() {
     let (env, client, buyer, seller, token) = setup();
 
     let escrow_id = make_id(&env, 15);
-    client.lock_funds(&escrow_id, &buyer, &seller, &token, &100_000, &1_000_000, &zero_memo(&env));
+    client.lock_funds(
+        &escrow_id,
+        &buyer,
+        &seller,
+        &token,
+        &100_000,
+        &1_000_000,
+        &zero_memo(&env),
+    );
     client.refund_funds(&escrow_id, &buyer);
 
     let result = client.try_refund_funds(&escrow_id, &buyer);
@@ -184,7 +266,15 @@ fn test_initiate_dispute_by_buyer() {
     let resolver = Address::generate(&env);
     let escrow_id = make_id(&env, 8);
 
-    client.lock_funds(&escrow_id, &buyer, &seller, &token, &500_000, &1_000_000, &zero_memo(&env));
+    client.lock_funds(
+        &escrow_id,
+        &buyer,
+        &seller,
+        &token,
+        &500_000,
+        &1_000_000,
+        &zero_memo(&env),
+    );
     client.initiate_dispute(&escrow_id, &buyer, &resolver);
 
     assert_eq!(client.get_state(&escrow_id), EscrowState::Disputed);
@@ -197,7 +287,15 @@ fn test_initiate_dispute_by_seller() {
     let resolver = Address::generate(&env);
     let escrow_id = make_id(&env, 9);
 
-    client.lock_funds(&escrow_id, &buyer, &seller, &token, &500_000, &1_000_000, &zero_memo(&env));
+    client.lock_funds(
+        &escrow_id,
+        &buyer,
+        &seller,
+        &token,
+        &500_000,
+        &1_000_000,
+        &zero_memo(&env),
+    );
     client.initiate_dispute(&escrow_id, &seller, &resolver);
 
     assert_eq!(client.get_state(&escrow_id), EscrowState::Disputed);
@@ -211,7 +309,15 @@ fn test_initiate_dispute_unauthorized_fails() {
     let resolver = Address::generate(&env);
     let escrow_id = make_id(&env, 10);
 
-    client.lock_funds(&escrow_id, &buyer, &seller, &token, &500_000, &1_000_000, &zero_memo(&env));
+    client.lock_funds(
+        &escrow_id,
+        &buyer,
+        &seller,
+        &token,
+        &500_000,
+        &1_000_000,
+        &zero_memo(&env),
+    );
 
     let result = client.try_initiate_dispute(&escrow_id, &random, &resolver);
     assert!(result.is_err());
@@ -226,7 +332,15 @@ fn test_vote_resolution_agreement_releases_to_seller() {
     let resolver = Address::generate(&env);
     let escrow_id = make_id(&env, 11);
 
-    client.lock_funds(&escrow_id, &buyer, &seller, &token, &400_000, &1_000_000, &zero_memo(&env));
+    client.lock_funds(
+        &escrow_id,
+        &buyer,
+        &seller,
+        &token,
+        &400_000,
+        &1_000_000,
+        &zero_memo(&env),
+    );
     client.initiate_dispute(&escrow_id, &buyer, &resolver);
 
     // Both vote to release to seller.
@@ -243,7 +357,15 @@ fn test_vote_resolution_agreement_refunds_buyer() {
     let resolver = Address::generate(&env);
     let escrow_id = make_id(&env, 12);
 
-    client.lock_funds(&escrow_id, &buyer, &seller, &token, &400_000, &1_000_000, &zero_memo(&env));
+    client.lock_funds(
+        &escrow_id,
+        &buyer,
+        &seller,
+        &token,
+        &400_000,
+        &1_000_000,
+        &zero_memo(&env),
+    );
     client.initiate_dispute(&escrow_id, &buyer, &resolver);
 
     // Both vote to refund buyer.
@@ -260,7 +382,15 @@ fn test_vote_resolution_disagreement_stays_disputed() {
     let resolver = Address::generate(&env);
     let escrow_id = make_id(&env, 13);
 
-    client.lock_funds(&escrow_id, &buyer, &seller, &token, &400_000, &1_000_000, &zero_memo(&env));
+    client.lock_funds(
+        &escrow_id,
+        &buyer,
+        &seller,
+        &token,
+        &400_000,
+        &1_000_000,
+        &zero_memo(&env),
+    );
     client.initiate_dispute(&escrow_id, &buyer, &resolver);
 
     // Votes disagree – no automatic resolution.
@@ -277,7 +407,15 @@ fn test_vote_resolution_duplicate_vote_fails() {
     let resolver = Address::generate(&env);
     let escrow_id = make_id(&env, 16);
 
-    client.lock_funds(&escrow_id, &buyer, &seller, &token, &400_000, &1_000_000, &zero_memo(&env));
+    client.lock_funds(
+        &escrow_id,
+        &buyer,
+        &seller,
+        &token,
+        &400_000,
+        &1_000_000,
+        &zero_memo(&env),
+    );
     client.initiate_dispute(&escrow_id, &buyer, &resolver);
 
     client.vote_resolution(&escrow_id, &buyer, &true);
@@ -306,9 +444,25 @@ fn test_reentrancy_lock_released_after_successful_lock_funds() {
     let id1 = make_id(&env, 20);
     let id2 = make_id(&env, 21);
 
-    client.lock_funds(&id1, &buyer, &seller, &token, &100_000, &1_000_000, &zero_memo(&env));
+    client.lock_funds(
+        &id1,
+        &buyer,
+        &seller,
+        &token,
+        &100_000,
+        &1_000_000,
+        &zero_memo(&env),
+    );
     // If the lock were not released this second call would panic with Reentrant.
-    client.lock_funds(&id2, &buyer, &seller, &token, &100_000, &1_000_000, &zero_memo(&env));
+    client.lock_funds(
+        &id2,
+        &buyer,
+        &seller,
+        &token,
+        &100_000,
+        &1_000_000,
+        &zero_memo(&env),
+    );
 
     assert_eq!(client.get_state(&id1), EscrowState::Locked);
     assert_eq!(client.get_state(&id2), EscrowState::Locked);
@@ -321,8 +475,24 @@ fn test_reentrancy_lock_released_after_successful_release_funds() {
     let id1 = make_id(&env, 22);
     let id2 = make_id(&env, 23);
 
-    client.lock_funds(&id1, &buyer, &seller, &token, &100_000, &1_000_000, &zero_memo(&env));
-    client.lock_funds(&id2, &buyer, &seller, &token, &100_000, &1_000_000, &zero_memo(&env));
+    client.lock_funds(
+        &id1,
+        &buyer,
+        &seller,
+        &token,
+        &100_000,
+        &1_000_000,
+        &zero_memo(&env),
+    );
+    client.lock_funds(
+        &id2,
+        &buyer,
+        &seller,
+        &token,
+        &100_000,
+        &1_000_000,
+        &zero_memo(&env),
+    );
 
     client.release_funds(&id1, &seller);
     // Guard must be clear for this second release to succeed.
@@ -339,8 +509,24 @@ fn test_reentrancy_lock_released_after_successful_refund_funds() {
     let id1 = make_id(&env, 24);
     let id2 = make_id(&env, 25);
 
-    client.lock_funds(&id1, &buyer, &seller, &token, &100_000, &1_000_000, &zero_memo(&env));
-    client.lock_funds(&id2, &buyer, &seller, &token, &100_000, &1_000_000, &zero_memo(&env));
+    client.lock_funds(
+        &id1,
+        &buyer,
+        &seller,
+        &token,
+        &100_000,
+        &1_000_000,
+        &zero_memo(&env),
+    );
+    client.lock_funds(
+        &id2,
+        &buyer,
+        &seller,
+        &token,
+        &100_000,
+        &1_000_000,
+        &zero_memo(&env),
+    );
 
     client.refund_funds(&id1, &buyer);
     // Guard must be clear for this second refund to succeed.
@@ -358,8 +544,24 @@ fn test_reentrancy_lock_released_after_successful_initiate_dispute() {
     let id1 = make_id(&env, 26);
     let id2 = make_id(&env, 27);
 
-    client.lock_funds(&id1, &buyer, &seller, &token, &100_000, &1_000_000, &zero_memo(&env));
-    client.lock_funds(&id2, &buyer, &seller, &token, &100_000, &1_000_000, &zero_memo(&env));
+    client.lock_funds(
+        &id1,
+        &buyer,
+        &seller,
+        &token,
+        &100_000,
+        &1_000_000,
+        &zero_memo(&env),
+    );
+    client.lock_funds(
+        &id2,
+        &buyer,
+        &seller,
+        &token,
+        &100_000,
+        &1_000_000,
+        &zero_memo(&env),
+    );
 
     client.initiate_dispute(&id1, &buyer, &resolver);
     // Guard must be clear for this second dispute to succeed.
@@ -377,8 +579,24 @@ fn test_reentrancy_lock_released_after_vote_resolution() {
     let id1 = make_id(&env, 28);
     let id2 = make_id(&env, 29);
 
-    client.lock_funds(&id1, &buyer, &seller, &token, &100_000, &1_000_000, &zero_memo(&env));
-    client.lock_funds(&id2, &buyer, &seller, &token, &100_000, &1_000_000, &zero_memo(&env));
+    client.lock_funds(
+        &id1,
+        &buyer,
+        &seller,
+        &token,
+        &100_000,
+        &1_000_000,
+        &zero_memo(&env),
+    );
+    client.lock_funds(
+        &id2,
+        &buyer,
+        &seller,
+        &token,
+        &100_000,
+        &1_000_000,
+        &zero_memo(&env),
+    );
     client.initiate_dispute(&id1, &buyer, &resolver);
     client.initiate_dispute(&id2, &buyer, &resolver);
 

@@ -217,10 +217,7 @@ fn test_admin_cannot_use_fallback_calls() {
 
     let args: Vec<Val> = vec![&env, 1u32.into_val(&env)];
     let result = proxy.try_forward(&admin, &symbol_short!("ping"), &args);
-    assert!(matches!(
-        result,
-        Err(Ok(UpgradeError::AdminCannotFallback))
-    ));
+    assert!(matches!(result, Err(Ok(UpgradeError::AdminCannotFallback))));
 }
 
 #[test]

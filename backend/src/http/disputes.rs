@@ -65,10 +65,7 @@ pub async fn file_dispute(
         .await?;
 
     // Invalidate the cached payment so the next GET reflects the active dispute
-    let _ = services
-        .cache
-        .invalidate_payment(&payment_id)
-        .await;
+    let _ = services.cache.invalidate_payment(&payment_id).await;
 
     Ok(Json(dispute))
 }
@@ -144,9 +141,7 @@ pub async fn list_all_disputes(
     Query(params): Query<DisputeQueryParams>,
 ) -> Result<Json<DisputeListResponse>, ApiError> {
     if auth_user.role != Role::Admin {
-        return Err(ApiError::Authorization(
-            "Admin access required".to_string(),
-        ));
+        return Err(ApiError::Authorization("Admin access required".to_string()));
     }
 
     let result = services.dispute.list_disputes(&params).await?;

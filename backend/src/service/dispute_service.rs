@@ -235,49 +235,57 @@ impl DisputeService {
 
         // Fetch paginated rows
         let rows = match (&params.status, &params.payment_id) {
-            (Some(status), Some(payment_id)) => client
-                .query(
-                    r#"SELECT id, payment_id, filed_by_user_id, reason, description,
+            (Some(status), Some(payment_id)) => {
+                client
+                    .query(
+                        r#"SELECT id, payment_id, filed_by_user_id, reason, description,
                               status, disputed_amount, resolution_notes, resolved_by,
                               created_at, updated_at
                        FROM payment_disputes
                        WHERE status = $1 AND payment_id = $2
                        ORDER BY created_at DESC LIMIT $3 OFFSET $4"#,
-                    &[status, payment_id, &params.limit, &params.offset],
-                )
-                .await?,
-            (Some(status), None) => client
-                .query(
-                    r#"SELECT id, payment_id, filed_by_user_id, reason, description,
+                        &[status, payment_id, &params.limit, &params.offset],
+                    )
+                    .await?
+            }
+            (Some(status), None) => {
+                client
+                    .query(
+                        r#"SELECT id, payment_id, filed_by_user_id, reason, description,
                               status, disputed_amount, resolution_notes, resolved_by,
                               created_at, updated_at
                        FROM payment_disputes
                        WHERE status = $1
                        ORDER BY created_at DESC LIMIT $2 OFFSET $3"#,
-                    &[status, &params.limit, &params.offset],
-                )
-                .await?,
-            (None, Some(payment_id)) => client
-                .query(
-                    r#"SELECT id, payment_id, filed_by_user_id, reason, description,
+                        &[status, &params.limit, &params.offset],
+                    )
+                    .await?
+            }
+            (None, Some(payment_id)) => {
+                client
+                    .query(
+                        r#"SELECT id, payment_id, filed_by_user_id, reason, description,
                               status, disputed_amount, resolution_notes, resolved_by,
                               created_at, updated_at
                        FROM payment_disputes
                        WHERE payment_id = $1
                        ORDER BY created_at DESC LIMIT $2 OFFSET $3"#,
-                    &[payment_id, &params.limit, &params.offset],
-                )
-                .await?,
-            (None, None) => client
-                .query(
-                    r#"SELECT id, payment_id, filed_by_user_id, reason, description,
+                        &[payment_id, &params.limit, &params.offset],
+                    )
+                    .await?
+            }
+            (None, None) => {
+                client
+                    .query(
+                        r#"SELECT id, payment_id, filed_by_user_id, reason, description,
                               status, disputed_amount, resolution_notes, resolved_by,
                               created_at, updated_at
                        FROM payment_disputes
                        ORDER BY created_at DESC LIMIT $1 OFFSET $2"#,
-                    &[&params.limit, &params.offset],
-                )
-                .await?,
+                        &[&params.limit, &params.offset],
+                    )
+                    .await?
+            }
         };
 
         let disputes = rows.iter().map(Self::row_to_dispute).collect();
@@ -465,10 +473,7 @@ impl DisputeService {
     }
 
     /// List all evidence for a dispute.
-    pub async fn list_evidence(
-        &self,
-        dispute_id: Uuid,
-    ) -> Result<Vec<DisputeEvidence>, ApiError> {
+    pub async fn list_evidence(&self, dispute_id: Uuid) -> Result<Vec<DisputeEvidence>, ApiError> {
         let client = self.db_pool.get().await?;
 
         let rows = client

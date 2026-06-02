@@ -91,10 +91,13 @@ impl UserIdentityContract {
 
         // Extend TTL for the stored data (30 days worth of ledgers, ~5 second ledgers)
         env.storage().persistent().extend_ttl(&key, 518400, 518400);
-        env.storage().persistent().extend_ttl(&username_key, 518400, 518400);
+        env.storage()
+            .persistent()
+            .extend_ttl(&username_key, 518400, 518400);
 
         // Emit event for user registration
-        env.events().publish(("register", "user"), (&address, &username));
+        env.events()
+            .publish(("register", "user"), (address, username));
 
         Ok(())
     }
@@ -115,7 +118,10 @@ impl UserIdentityContract {
         address.require_auth();
 
         let key = DataKey::User(address.clone());
-        let mut user: User = env.storage().persistent().get(&key)
+        let mut user: User = env
+            .storage()
+            .persistent()
+            .get(&key)
             .ok_or(Error::UserNotFound)?;
 
         user.profile_uri = profile_uri;
@@ -142,13 +148,17 @@ impl UserIdentityContract {
         address.require_auth();
 
         let key = DataKey::User(address.clone());
-        let mut user: User = env.storage().persistent().get(&key)
+        let mut user: User = env
+            .storage()
+            .persistent()
+            .get(&key)
             .ok_or(Error::UserNotFound)?;
 
         user.reputation_score = score;
         env.storage().persistent().set(&key, &user);
 
-        env.events().publish(("update", "reputation"), (&address, &score));
+        env.events()
+            .publish(("update", "reputation"), (address, score));
 
         Ok(())
     }

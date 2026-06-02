@@ -1,9 +1,9 @@
 #![no_std]
+#![allow(clippy::too_many_arguments)]
 
 use soroban_sdk::{
-    contract, contractimpl, contracttype, panic_with_error, contracterror,
-    symbol_short, Address, Env, Symbol, BytesN,
-    token::{Client as TokenClient},
+    contract, contracterror, contractimpl, contracttype, panic_with_error, symbol_short,
+    token::Client as TokenClient, Address, BytesN, Env, Symbol,
 };
 
 // ─── Reentrancy Guard ────────────────────────────────────────────────────────
@@ -25,7 +25,12 @@ use soroban_sdk::{
 
 fn reentrancy_guard_enter(env: &Env) {
     let key = symbol_short!("re_lock");
-    if env.storage().instance().get::<Symbol, bool>(&key).unwrap_or(false) {
+    if env
+        .storage()
+        .instance()
+        .get::<Symbol, bool>(&key)
+        .unwrap_or(false)
+    {
         panic_with_error!(env, EscrowError::Reentrant);
     }
     env.storage().instance().set(&key, &true);
@@ -88,7 +93,6 @@ pub struct EscrowContract;
 
 #[contractimpl]
 impl EscrowContract {
-
     /// Lock funds into escrow.
     ///
     /// The buyer transfers `amount` tokens to this contract.  The escrow is
@@ -146,7 +150,7 @@ impl EscrowContract {
 
         env.events().publish(
             (symbol_short!("escrow"), symbol_short!("locked")),
-            (escrow_id, buyer, seller, amount)
+            (escrow_id, buyer, seller, amount),
         );
 
         reentrancy_guard_exit(&env);
@@ -155,18 +159,17 @@ impl EscrowContract {
     /// Release escrowed funds to the seller.
     ///
     /// Only the seller or a designated arbitrator may call this.
-    pub fn release_funds(
-        env: Env,
-        escrow_id: BytesN<32>,
-        caller: Address,
-    ) {
+    pub fn release_funds(env: Env, escrow_id: BytesN<32>, caller: Address) {
         // ── Reentrancy guard ──────────────────────────────────────────────
         reentrancy_guard_enter(&env);
 
         caller.require_auth();
 
         let key = escrow_key(&escrow_id);
-        let mut escrow: Escrow = env.storage().persistent().get(&key)
+        let mut escrow: Escrow = env
+            .storage()
+            .persistent()
+            .get(&key)
             .unwrap_or_else(|| panic_with_error!(env, EscrowError::NotLocked));
 
         if escrow.state != EscrowState::Locked {
@@ -200,7 +203,7 @@ impl EscrowContract {
 
         env.events().publish(
             (symbol_short!("escrow"), symbol_short!("released")),
-            (escrow_id, caller, escrow.seller, escrow.amount)
+            (escrow_id, caller, escrow.seller, escrow.amount),
         );
 
         reentrancy_guard_exit(&env);
@@ -210,18 +213,17 @@ impl EscrowContract {
     ///
     /// The buyer may refund at any time.  Anyone may trigger a refund once the
     /// 7-day timeout has elapsed.  An arbitrator (if set) may also refund.
-    pub fn refund_funds(
-        env: Env,
-        escrow_id: BytesN<32>,
-        caller: Address,
-    ) {
+    pub fn refund_funds(env: Env, escrow_id: BytesN<32>, caller: Address) {
         // ── Reentrancy guard ──────────────────────────────────────────────
         reentrancy_guard_enter(&env);
 
         caller.require_auth();
 
         let key = escrow_key(&escrow_id);
-        let mut escrow: Escrow = env.storage().persistent().get(&key)
+        let mut escrow: Escrow = env
+            .storage()
+            .persistent()
+            .get(&key)
             .unwrap_or_else(|| panic_with_error!(env, EscrowError::NotLocked));
 
         if escrow.state != EscrowState::Locked {
@@ -231,8 +233,7 @@ impl EscrowContract {
 
         let is_timeout = env.ledger().timestamp() >= escrow.created_at + 7 * 24 * 60 * 60;
         let is_authorized =
-            caller == escrow.buyer ||
-            escrow.arbitrator.as_ref().map_or(false, |a| *a == caller);
+            caller == escrow.buyer || escrow.arbitrator.as_ref().is_some_and(|a| *a == caller);
 
         if !is_authorized && !is_timeout {
             reentrancy_guard_exit(&env);
@@ -253,7 +254,7 @@ impl EscrowContract {
 
         env.events().publish(
             (symbol_short!("escrow"), symbol_short!("refunded")),
-            (escrow_id, caller, escrow.buyer, escrow.amount)
+            (escrow_id, caller, escrow.buyer, escrow.amount),
         );
 
         reentrancy_guard_exit(&env);
@@ -264,19 +265,17 @@ impl EscrowContract {
     /// Either the buyer or seller may open a dispute while the escrow is in
     /// the `Locked` state.  A `resolver` address is recorded for off-chain
     /// reference; on-chain resolution is handled via `vote_resolution`.
-    pub fn initiate_dispute(
-        env: Env,
-        escrow_id: BytesN<32>,
-        caller: Address,
-        resolver: Address,
-    ) {
+    pub fn initiate_dispute(env: Env, escrow_id: BytesN<32>, caller: Address, resolver: Address) {
         // ── Reentrancy guard ──────────────────────────────────────────────
         reentrancy_guard_enter(&env);
 
         caller.require_auth();
 
         let key = escrow_key(&escrow_id);
-        let mut escrow: Escrow = env.storage().persistent().get(&key)
+        let mut escrow: Escrow = env
+            .storage()
+            .persistent()
+            .get(&key)
             .unwrap_or_else(|| panic_with_error!(env, EscrowError::NotLocked));
 
         if escrow.state != EscrowState::Locked {
@@ -295,7 +294,7 @@ impl EscrowContract {
 
         env.events().publish(
             (symbol_short!("escrow"), symbol_short!("disputed")),
-            (escrow_id, caller, resolver)
+            (escrow_id, caller, resolver),
         );
 
         reentrancy_guard_exit(&env);
@@ -318,7 +317,10 @@ impl EscrowContract {
         caller.require_auth();
 
         let key = escrow_key(&escrow_id);
-        let mut escrow: Escrow = env.storage().persistent().get(&key)
+        let mut escrow: Escrow = env
+            .storage()
+            .persistent()
+            .get(&key)
             .unwrap_or_else(|| panic_with_error!(env, EscrowError::NotLocked));
 
         if escrow.state != EscrowState::Disputed {
@@ -379,7 +381,7 @@ impl EscrowContract {
 
         env.events().publish(
             (symbol_short!("escrow"), symbol_short!("vote")),
-            (escrow_id, caller, resolve_to_seller)
+            (escrow_id, caller, resolve_to_seller),
         );
 
         reentrancy_guard_exit(&env);
@@ -389,7 +391,8 @@ impl EscrowContract {
 
     pub fn get_escrow(env: Env, escrow_id: BytesN<32>) -> Escrow {
         let key = escrow_key(&escrow_id);
-        env.storage().persistent()
+        env.storage()
+            .persistent()
             .get(&key)
             .unwrap_or_else(|| panic_with_error!(env, EscrowError::NotLocked))
     }
@@ -405,7 +408,8 @@ impl EscrowContract {
     /// Get escrow state.
     pub fn get_state(env: Env, escrow_id: BytesN<32>) -> EscrowState {
         let key = escrow_key(&escrow_id);
-        env.storage().persistent()
+        env.storage()
+            .persistent()
             .get::<_, Escrow>(&key)
             .unwrap_or_else(|| panic_with_error!(env, EscrowError::NotLocked))
             .state

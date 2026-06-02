@@ -12,7 +12,8 @@ use soroban_sdk::{
 // ---------------------------------------------------------------------------
 
 fn make_token(env: &Env, admin: &Address) -> Address {
-    env.register_stellar_asset_contract_v2(admin.clone()).address()
+    env.register_stellar_asset_contract_v2(admin.clone())
+        .address()
 }
 
 fn mint(env: &Env, token: &Address, to: &Address, amount: i128) {
@@ -25,7 +26,11 @@ fn token_balance(env: &Env, token: &Address, who: &Address) -> i128 {
 
 /// Build a Recipient with zero total_received (initial state).
 fn recip(address: Address, share_bps: u32) -> Recipient {
-    Recipient { address, share_bps, total_received: 0 }
+    Recipient {
+        address,
+        share_bps,
+        total_received: 0,
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -66,7 +71,13 @@ impl Setup {
 
         let client: FeeDistributionClient<'static> = unsafe { core::mem::transmute(client) };
 
-        Setup { env, client, admin, token, r: [r0, r1, r2] }
+        Setup {
+            env,
+            client,
+            admin,
+            token,
+            r: [r0, r1, r2],
+        }
     }
 
     /// Deposit `amount` from a freshly minted depositor.
@@ -81,7 +92,9 @@ impl Setup {
 fn has_event(env: &Env, t0: &str, t1: &str) -> bool {
     let events = env.events().all();
     events.iter().any(|(_, topics, _)| {
-        if topics.len() != 2 { return false; }
+        if topics.len() != 2 {
+            return false;
+        }
         let a = <Symbol as TryFromVal<Env, _>>::try_from_val(env, &topics.get(0).unwrap());
         let b = <Symbol as TryFromVal<Env, _>>::try_from_val(env, &topics.get(1).unwrap());
         matches!((a, b), (Ok(x), Ok(y))
@@ -155,7 +168,7 @@ fn test_initialize_zero_share_fails() {
 
     let bad = vec![
         &env,
-        recip(Address::generate(&env), 0),      // invalid
+        recip(Address::generate(&env), 0), // invalid
         recip(Address::generate(&env), 10_000),
     ];
     let result = client.try_initialize(&admin, &token, &bad);
@@ -425,7 +438,8 @@ fn test_set_recipients_flushes_pending_first() {
     s.deposit(10_000);
 
     let new_r = Address::generate(&s.env);
-    s.client.set_recipients(&vec![&s.env, recip(new_r.clone(), 10_000)]);
+    s.client
+        .set_recipients(&vec![&s.env, recip(new_r.clone(), 10_000)]);
 
     // Pending was flushed to old recipients before the switch.
     assert_eq!(s.client.get_pending(), 0);
@@ -456,10 +470,9 @@ fn test_set_recipients_empty_fails() {
 fn test_non_admin_cannot_set_recipients() {
     let s = Setup::new();
     s.env.mock_auths(&[]);
-    let result = s.client.try_set_recipients(&vec![
-        &s.env,
-        recip(Address::generate(&s.env), 10_000),
-    ]);
+    let result = s
+        .client
+        .try_set_recipients(&vec![&s.env, recip(Address::generate(&s.env), 10_000)]);
     assert!(result.is_err());
 }
 
